@@ -9,7 +9,6 @@ CarData::CarData(double maxSteerAngle, double wheelBase,
       axleToBack(axleToBack),
       width(width)
 {
-    cout << "CarData constructor called" << endl;
 }
 
 // Method to create the vehicle's geometry

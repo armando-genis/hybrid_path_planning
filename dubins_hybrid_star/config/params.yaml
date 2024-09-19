@@ -7,3 +7,4 @@ dubins_path_planning_node:
     width: 1.9
     pathLength: 4.0
     step_car: 1.15
+    grid_map_topic: "/grid_map"

@@ -28,8 +28,8 @@ class main_path_planning : public rclcpp::Node
 {
 private:
     // Simulation parameters
-    double pathLength = 4.0;
-    double step_car = 1.15;
+    double pathLength; // 4
+    double step_car;   // 1.15
 
     // Car Data
     CarData car_data_;
@@ -38,6 +38,8 @@ private:
     double axleToFront;
     double axleToBack;
     double width;
+
+    std::string grid_map_topic;
 
     // Grid Map
     std::shared_ptr<Grid_map> grid_map_;

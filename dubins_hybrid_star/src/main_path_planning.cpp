@@ -9,6 +9,7 @@ main_path_planning::main_path_planning(/* args */) : Node("main_planner_node")
     this->declare_parameter<double>("width", 0.0);
     this->declare_parameter<double>("pathLength", 0.0);
     this->declare_parameter<double>("step_car", 0.0);
+    this->declare_parameter<std::string>("grid_map_topic", "/grid_map");
 
     this->get_parameter("maxSteerAngle", maxSteerAngle);
     this->get_parameter("wheelBase", wheelBase);
@@ -17,11 +18,12 @@ main_path_planning::main_path_planning(/* args */) : Node("main_planner_node")
     this->get_parameter("width", width);
     this->get_parameter("pathLength", pathLength);
     this->get_parameter("step_car", step_car);
+    this->get_parameter("grid_map_topic", grid_map_topic);
 
     // car_data_(0.6, 2.75, 1.1, 1.2, 1.9)
 
     // Initialize subscribers
-    grid_map_sub_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>("/grid_map", 10, std::bind(&main_path_planning::gridMapdata, this, std::placeholders::_1));
+    grid_map_sub_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(grid_map_topic, 10, std::bind(&main_path_planning::gridMapdata, this, std::placeholders::_1));
     start_point_sub_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>("/initialpose", 10, std::bind(&main_path_planning::start_point, this, std::placeholders::_1));
     goal_point_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>("/goal_pose", 10, std::bind(&main_path_planning::goal_point, this, std::placeholders::_1));
 
@@ -34,12 +36,15 @@ main_path_planning::main_path_planning(/* args */) : Node("main_planner_node")
     car_data_ = CarData(maxSteerAngle, wheelBase, axleToFront, axleToBack, width);
     car_data_.createVehicleGeometry();
 
-    // log out parameter
-    RCLCPP_INFO(this->get_logger(), "maxSteerAngle: %f", maxSteerAngle);
-    RCLCPP_INFO(this->get_logger(), "wheelBase: %f", wheelBase);
-    RCLCPP_INFO(this->get_logger(), "axleToFront: %f", axleToFront);
-    RCLCPP_INFO(this->get_logger(), "axleToBack: %f", axleToBack);
-    RCLCPP_INFO(this->get_logger(), "width: %f", width);
+    // log out parameters in blue color
+    RCLCPP_INFO(this->get_logger(), "\033[1;34mmaxSteerAngle: %f\033[0m", maxSteerAngle);
+    RCLCPP_INFO(this->get_logger(), "\033[1;34mwheelBase: %f\033[0m", wheelBase);
+    RCLCPP_INFO(this->get_logger(), "\033[1;34maxleToFront: %f\033[0m", axleToFront);
+    RCLCPP_INFO(this->get_logger(), "\033[1;34maxleToBack: %f\033[0m", axleToBack);
+    RCLCPP_INFO(this->get_logger(), "\033[1;34mwidth: %f\033[0m", width);
+    RCLCPP_INFO(this->get_logger(), "\033[1;34mpathLength: %f\033[0m", pathLength);
+    RCLCPP_INFO(this->get_logger(), "\033[1;34mstep_car: %f\033[0m", step_car);
+    RCLCPP_INFO(this->get_logger(), "\033[1;34mgrid_map_topic: %s\033[0m", grid_map_topic.c_str());
 
     RCLCPP_INFO(this->get_logger(), "\033[1;32m----> optimal_planner_node initialized.\033[0m");
 }
