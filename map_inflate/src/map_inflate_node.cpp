@@ -98,7 +98,7 @@ void map_inflate_node::InflateMap(const Mat &input_map, Mat &output_map, double 
     bitwise_not(binarized_map, inverted_map);
 
     // Inflate obstacles based on the inflate_radius (using dilation)
-    Mat element = getStructuringElement(MORPH_ELLIPSE, Size(2 * inflate_radius, 2 * inflate_radius)); // Structuring element for dilation
+    Mat element = getStructuringElement(MORPH_ELLIPSE, Size(2 * inflate_radius + 1, 2 * inflate_radius + 1), Point(inflate_radius, inflate_radius));
     dilate(inverted_map, output_map, element);
 
     // Invert the map back to its original state (obstacles black)

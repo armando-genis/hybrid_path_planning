@@ -16,6 +16,7 @@ void HybridAstar::motionCommands()
     int direction = 1;
     for (double i = car_data_.maxSteerAngle; i >= -car_data_.maxSteerAngle; i -= car_data_.steer_step)
     {
+        // fist data: steering angle, second data: direction
         motionCommand.push_back({i, static_cast<double>(direction)});
         motionCommand.push_back({i, -static_cast<double>(direction)});
     }
@@ -63,7 +64,7 @@ vector<std::shared_ptr<planner::Node>> HybridAstar::GetnextNeighbours(const std:
         {
             // cost calculation for the node
             double cost = PathCost(current_node, command);
-            // cout << "--->motion Command: " << command[0] << " cost: " << cost << endl;
+            // cout << blue << "--->motion Command: " << command[0] << " cost: " << cost << " command: " << command[1] << reset << endl;
             auto next_node = std::make_shared<planner::Node>(traj.back(), traj, cost, command[0], command[1], current_node);
             Neighbour_nodes.push_back(next_node);
         }
@@ -321,9 +322,29 @@ std::shared_ptr<planner::HolonomicNode> HybridAstar::getNode(int index, vector<s
 }
 
 // ============================= Hybrid A* ============================
-double HybridAstar::eucledianCost(const vector<int> &holonomicMotionCommand)
+double HybridAstar::eucledianCost(const vector<int> &holonomicMotionCommand, const State &current_state)
 {
-    return hypot(holonomicMotionCommand[0], holonomicMotionCommand[1]);
+    double distance_cost = std::hypot(holonomicMotionCommand[0], holonomicMotionCommand[1]);
+
+    double obstacle_penalty = 0.0;
+
+    for (int dx = -1; dx <= 1; ++dx)
+    {
+        for (int dy = -1; dy <= 1; ++dy)
+        {
+            int neighbor_x = current_state.gridx + dx;
+            int neighbor_y = current_state.gridy + dy;
+
+            // Increase penalty if neighbor cell is in collision
+            if (grid_map_.isInCollision(neighbor_x, neighbor_y))
+            {
+                obstacle_penalty += 10.0;
+            }
+        }
+    }
+
+    // Total cost is the distance cost plus the obstacle penalty
+    return distance_cost + obstacle_penalty;
 }
 
 vector<std::shared_ptr<planner::HolonomicNode>> HybridAstar::holonomicCostsWithObstacles_planning(const std::shared_ptr<planner::Node> &GoalNode)
@@ -392,7 +413,7 @@ vector<std::shared_ptr<planner::HolonomicNode>> HybridAstar::holonomicCostsWithO
             if (!grid_map_.isInCollision(cell_x, cell_y))
             {
                 // Calculate the new cost to reach the neighbor
-                double newCost = current_cost + eucledianCost(command);
+                double newCost = current_cost + eucledianCost(command, current_Node->Current_state);
                 // Get the index of the neighboring cell
                 int current_index = grid_map_.toCellIndex(cell_x, cell_y);
                 auto neigh_node_ptr = getNode(current_index, goal_map_);
@@ -462,7 +483,10 @@ vector<State> HybridAstar::run(State start_state, State goal_state)
 
     // Step 6: Add the start node to the open set
     openSet[start_state_] = startNode;
-    costQueue.push({std::max(startNode->Cost_path, hybridCost * goal_map_[start_index]->cost), startNode});
+    costQueue.push({startNode->Cost_path + hybridCost * goal_map_[start_index]->cost, startNode});
+
+    // Use max cost calculation can not be efficient
+    // costQueue.push({std::max(startNode->Cost_path, hybridCost * goal_map_[start_index]->cost), startNode});
 
     // Step 6.5: Initialize a counter for the number of iterations
     int iterations = 0;
@@ -483,6 +507,12 @@ vector<State> HybridAstar::run(State start_state, State goal_state)
 
         // Get the current node from the open set
         auto currentNode = openSet[currentState];
+
+        // Check if currentNode is in the closed set
+        if (closedSet.find(currentState) != closedSet.end())
+        {
+            continue;
+        }
 
         // Move currentNode from openSet to closedSet
         openSet.erase(currentState);
@@ -519,6 +549,8 @@ vector<State> HybridAstar::run(State start_state, State goal_state)
         // Get neighboring nodes by simulating motion
         auto neighbors = GetnextNeighbours(currentNode);
 
+        // cout << red << "===============================" << reset << endl;
+
         for (auto &neighbor : neighbors)
         {
 
@@ -532,7 +564,11 @@ vector<State> HybridAstar::run(State start_state, State goal_state)
 
             // Calculate the neighbor's cost
             int neighbor_index = grid_map_.toCellIndex(neighborState.gridx, neighborState.gridy);
+
             double neighborCost = neighbor->Cost_path + hybridCost * goal_map_[neighbor_index]->cost;
+
+            // Use max cost calculation can not be efficient
+            // double neighborCost = std::max(neighbor->Cost_path, hybridCost * goal_map_[neighbor_index]->cost);
 
             // If neighbor is not in the open set, or the new cost is lower, add/update it
             if (openSet.find(neighborState) == openSet.end() || neighbor->Cost_path < openSet[neighborState]->Cost_path)
@@ -568,6 +604,14 @@ vector<State> HybridAstar::run(State start_state, State goal_state)
     auto end_time = std::chrono::system_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
     cout << blue << "Execution time: " << duration << " ms" << reset << endl;
+
+    // Memory release: clear openSet and closedSet
+    openSet.clear();
+    closedSet.clear();
+    while (!costQueue.empty())
+    {
+        costQueue.pop();
+    }
 
     cout << blue << " ----> Finish <---- " << reset << endl;
 

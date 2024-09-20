@@ -240,6 +240,10 @@ void main_path_planning::hybridAstarPathPlanning()
     // Publish the MarkerArray containing the arrows
     hybrid_astar_path_pub_->publish(marker_array_next);
 
+    // memory clean up
+    goal_trajectory.clear();
+    marker_array_next.markers.clear();
+
     goal_point_received_ = false;
     start_point_received_ = false;
 }

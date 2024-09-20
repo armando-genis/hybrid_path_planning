@@ -60,7 +60,7 @@ public:
     vector<vector<int>> holonomicMotionCommands();
     vector<std::shared_ptr<planner::HolonomicNode>> holonomicCostsWithObstacles_planning(const std::shared_ptr<planner::Node> &GoalNode);
     std::shared_ptr<planner::HolonomicNode> getNode(int index, vector<std::shared_ptr<planner::HolonomicNode>> &goal_map_);
-    double eucledianCost(const vector<int> &holonomicMotionCommand);
+    double eucledianCost(const vector<int> &holonomicMotionCommand, const State &current_state);
 
 private:
     Grid_map grid_map_;
@@ -77,11 +77,11 @@ private:
     double simulationLength;
     double step_car;
 
-    double reverse = 10.0;
-    double directionChange = 200.0;
-    double steerAngle = 15.0;
-    double steerAngleChange = 20.0;
-    double hybridCost = 30.0;
+    double reverse = 20.0;
+    double directionChange = 180.0;
+    double steerAngle = 1.0;
+    double steerAngleChange = 5.0;
+    double hybridCost = 50.0;
 
     // colors for the terminal
     string green = "\033[1;32m";
