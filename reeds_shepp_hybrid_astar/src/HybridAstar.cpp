@@ -3,7 +3,7 @@
 HybridAstar::HybridAstar(Grid_map grid_map, CarData car_data, double simulationLength, double step_car)
     : grid_map_(grid_map), car_data_(car_data), simulationLength(simulationLength), step_car(step_car)
 {
-    cout << "--Hybrid Astar Initialized--" << endl;
+    cout << purple << "--Hybrid Astar Initialized--" << reset << endl;
 
     // Step 2: Generate motion commands
     motionCommands();

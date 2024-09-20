@@ -16,7 +16,7 @@ def generate_launch_description():
         name='dubins_path_planning_node',
         output='screen',
         parameters=[paramsConfig], 
-        emulate_tty=True
+        additional_env={'RCUTILS_CONSOLE_OUTPUT_FORMAT': "{message}"}
 
     )
     
