@@ -77,11 +77,11 @@ private:
     double simulationLength;
     double step_car;
 
-    double reverse = 20.0;
-    double directionChange = 180.0;
-    double steerAngle = 1.0;
-    double steerAngleChange = 5.0;
-    double hybridCost = 50.0;
+    double reverse = 10.0;
+    double directionChange = 200.0;
+    double steerAngle = 15.0;
+    double steerAngleChange = 20.0;
+    double hybridCost = 30.0;
 
     // colors for the terminal
     string green = "\033[1;32m";

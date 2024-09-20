@@ -33,7 +33,6 @@ add_executable(reeds_shepp_path_planning_node
                 src/Grid_map.cpp
                 src/sat_collision_checker.cc
                 src/HybridAstar.cpp
-                src/dubins_path.cpp
                 src/reeds_shepp_path.cpp
               )
 

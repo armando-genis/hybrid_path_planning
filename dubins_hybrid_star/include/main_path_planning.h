@@ -52,11 +52,15 @@ private:
     bool start_point_received_ = false;
     bool goal_point_received_ = false;
 
+    // store start and goal point
+    std::vector<State> start_goal_points_;
+
     // main functions
     void start_point(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr start);
     void goal_point(const geometry_msgs::msg::PoseStamped::SharedPtr goal);
     void gridMapdata(const nav_msgs::msg::OccupancyGrid::SharedPtr map);
     void hybridAstarPathPlanning();
+    void Star_End_point_visualization();
 
     // subscriber
     rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr grid_map_sub_;

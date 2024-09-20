@@ -195,12 +195,77 @@ void main_path_planning::goal_point(const geometry_msgs::msg::PoseStamped::Share
 void main_path_planning::hybridAstarPathPlanning()
 {
 
+    if (!start_point_received_ || !goal_point_received_)
+    {
+        RCLCPP_ERROR(this->get_logger(), "\033[1;31mStart or Goal point is not received\033[0m");
+        return;
+    }
+
+    // push the start and goal points to vector start_goal_points_
+    start_goal_points_.push_back(start_state_);
+    start_goal_points_.push_back(goal_state_);
+
+    Star_End_point_visualization();
+
     HybridAstar hybrid_astar(*grid_map_, car_data_, pathLength, step_car);
     auto goal_trajectory = hybrid_astar.run(start_state_, goal_state_);
 
     visualization_msgs::msg::MarkerArray marker_array_next;
     int id = 4000; // Unique ID for each marker
     for (const auto &state : goal_trajectory)
+    {
+
+        auto rotated_vehicle_poly = car_data_.getVehicleGeometry_state(state);
+
+        visualization_msgs::msg::Marker car_polygon_marker;
+        car_polygon_marker.header.frame_id = "map";
+        car_polygon_marker.header.stamp = this->now();
+        car_polygon_marker.ns = "next_state_polygons";
+        car_polygon_marker.action = visualization_msgs::msg::Marker::ADD;
+        car_polygon_marker.id = id++;
+        car_polygon_marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
+        car_polygon_marker.scale.x = 0.07;
+        car_polygon_marker.color.r = 0.77;
+        car_polygon_marker.color.g = 0.45;
+        car_polygon_marker.color.b = 1.0;
+        car_polygon_marker.color.a = 1.0;
+
+        std::vector<geometry_msgs::msg::Point> car_data_points;
+
+        for (const auto &point : rotated_vehicle_poly.points)
+        {
+            geometry_msgs::msg::Point p;
+            p.x = point.x;
+            p.y = point.y;
+            p.z = 0.0;
+            car_data_points.push_back(p);
+        }
+
+        car_data_points.push_back(car_data_points.front());
+
+        car_polygon_marker.points = car_data_points;
+
+        // Add the marker to the marker array
+        marker_array_next.markers.push_back(car_polygon_marker);
+    }
+
+    // Publish the MarkerArray containing the arrows
+    hybrid_astar_path_pub_->publish(marker_array_next);
+
+    // memory clean up
+    goal_trajectory.clear();
+    marker_array_next.markers.clear();
+
+    goal_point_received_ = false;
+    start_point_received_ = false;
+}
+
+void main_path_planning::Star_End_point_visualization()
+{
+
+    visualization_msgs::msg::MarkerArray arrow_states;
+    int id = 7000; // Unique ID for each marker
+    for (const auto &state : start_goal_points_)
     {
         visualization_msgs::msg::Marker marker;
         marker.header.frame_id = "map"; // Assuming map frame
@@ -210,7 +275,6 @@ void main_path_planning::hybridAstarPathPlanning()
         marker.id = id++;
         marker.type = visualization_msgs::msg::Marker::ARROW;
 
-        // Set the position of the arrow (next neighbor state position)
         marker.pose.position.x = state.x;
         marker.pose.position.y = state.y;
         marker.pose.position.z = 0.0;
@@ -223,25 +287,22 @@ void main_path_planning::hybridAstarPathPlanning()
         marker.pose.orientation.z = quat.z();
         marker.pose.orientation.w = quat.w();
 
-        marker.scale.x = 1.0; // Length of the arrow
-        marker.scale.y = 0.1; // Width of the arrow shaft
-        marker.scale.z = 0.1; // Height
+        marker.scale.x = 2.0; // Length of the arrow
+        marker.scale.y = 0.3; // Width of the arrow shaft
+        marker.scale.z = 0.3; // Height of the arrow shaft
 
-        // Set the color of the arrow
-        marker.color.r = 0.77;
-        marker.color.g = 0.45;
+        marker.color.r = 0.11;
+        marker.color.g = 0.54;
         marker.color.b = 1.0;
-        marker.color.a = 1.0; // Fully opaque
+        marker.color.a = 1.0;
 
-        // Add the marker to the marker array
-        marker_array_next.markers.push_back(marker);
+        arrow_states.markers.push_back(marker);
     }
 
     // Publish the MarkerArray containing the arrows
-    hybrid_astar_path_pub_->publish(marker_array_next);
+    arrow_pub_->publish(arrow_states);
 
-    goal_point_received_ = false;
-    start_point_received_ = false;
+    start_goal_points_.clear();
 }
 
 int main(int argc, char **argv)

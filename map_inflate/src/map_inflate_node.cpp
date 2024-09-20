@@ -17,10 +17,21 @@ private:
     void InflateMap(const Mat &input_map, Mat &output_map, double resolution);
     nav_msgs::msg::OccupancyGrid CreateInflatedOccupancyGrid(const nav_msgs::msg::OccupancyGrid::SharedPtr &original_grid, const Mat &inflated_map);
 
-    Mat LabelMap; // Label map that marks obstacles and free space
+    Mat last_inflated_map;        // Store the last inflated map
+    bool map_initialized = false; // Track if the map was already processed
+    int previous_height = 0;
+    int previous_width = 0;
 
     rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr grid_map_sub_;
     rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr inflated_map_pub_;
+
+    // colors for the terminal
+    string green = "\033[1;32m";
+    string red = "\033[1;31m";
+    string blue = "\033[1;34m";
+    string yellow = "\033[1;33m";
+    string purple = "\033[1;35m";
+    string reset = "\033[0m";
 
 public:
     map_inflate_node();
@@ -39,9 +50,14 @@ map_inflate_node::map_inflate_node() : Node("map_inflate_node")
 
     grid_map_sub_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
         grid_map_topic_IN, 10, std::bind(&map_inflate_node::MapCallback, this, std::placeholders::_1));
+
     inflated_map_pub_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>(grid_map_topic_OUT, 10);
 
-    RCLCPP_INFO(this->get_logger(), "Inflated map Node initialized with inflation_radius: %.2f meters", inflation_radius);
+    RCLCPP_INFO(this->get_logger(), "\033[1;32m----> map_inflate_node initialized.\033[0m");
+
+    cout << blue << "Inflation radius: " << inflation_radius << " m" << reset << endl;
+    cout << blue << "Subscribed to: " << grid_map_topic_IN << reset << endl;
+    cout << blue << "Published to: " << grid_map_topic_OUT << reset << endl;
 }
 
 map_inflate_node::~map_inflate_node() {}
@@ -50,8 +66,24 @@ void map_inflate_node::MapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr
 {
     int height = msg->info.height;
     int width = msg->info.width;
-    double resolution = msg->info.resolution; // Get the map resolution in meters per pixel
+    double resolution = msg->info.resolution;
 
+    // Check if the height and width have changed
+    if (height == previous_height && width == previous_width && map_initialized)
+    {
+        // Dimensions haven't changed, publish the stored inflated map
+        nav_msgs::msg::OccupancyGrid inflated_occ_grid = CreateInflatedOccupancyGrid(msg, last_inflated_map);
+        inflated_map_pub_->publish(inflated_occ_grid);
+        return;
+    }
+
+    cout << yellow << "Received a new map with new dimensions: " << height << "x" << width << reset << endl;
+
+    // Update the previous dimensions
+    previous_height = height;
+    previous_width = width;
+
+    // Create an OpenCV Mat to hold the map data
     Mat map(height, width, CV_8UC1);
 
     // Convert the occupancy grid to OpenCV Mat format (from ROS to OpenCV)
@@ -69,12 +101,15 @@ void map_inflate_node::MapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr
     Mat inflated_map;
     InflateMap(map, inflated_map, resolution);
 
+    // Store the inflated map
+    last_inflated_map = inflated_map.clone();
+    map_initialized = true; // Mark that the map has been initialized
+
     // Convert the inflated map back to OccupancyGrid and publish it
     nav_msgs::msg::OccupancyGrid inflated_occ_grid = CreateInflatedOccupancyGrid(msg, inflated_map);
     inflated_map_pub_->publish(inflated_occ_grid);
 
-    // Optionally, print a success message
-    RCLCPP_INFO(this->get_logger(), "Inflated map published.");
+    cout << green << "----> Inflated map published. <----" << reset << endl;
 }
 
 void map_inflate_node::InflateMap(const Mat &input_map, Mat &output_map, double resolution)
@@ -86,8 +121,6 @@ void map_inflate_node::InflateMap(const Mat &input_map, Mat &output_map, double 
     {
         inflate_radius = 1; // Ensure at least a small inflation
     }
-
-    RCLCPP_INFO(this->get_logger(), "Inflation radius in pixels: %d", inflate_radius);
 
     // Threshold the map for binarization (use Otsu's method to handle automatic binarization)
     Mat binarized_map;
@@ -111,13 +144,13 @@ nav_msgs::msg::OccupancyGrid map_inflate_node::CreateInflatedOccupancyGrid(const
     nav_msgs::msg::OccupancyGrid inflated_occ_grid;
     inflated_occ_grid.header.stamp = this->now();
     inflated_occ_grid.header.frame_id = original_grid->header.frame_id;
-    inflated_occ_grid.info = original_grid->info; // Copy the map info (resolution, size, etc.)
+    inflated_occ_grid.info = original_grid->info;
     inflated_occ_grid.data.resize(original_grid->info.height * original_grid->info.width);
 
     // Convert OpenCV Mat back to occupancy grid values (from 0-255 grayscale to 0-100 occupancy)
-    for (int i = 0; i < original_grid->info.height; i++)
+    for (unsigned int i = 0; i < original_grid->info.height; i++)
     {
-        for (int j = 0; j < original_grid->info.width; j++)
+        for (unsigned int j = 0; j < original_grid->info.width; j++)
         {
             uchar occ_prob = inflated_map.at<uchar>(original_grid->info.height - i - 1, j);
             inflated_occ_grid.data[i * original_grid->info.width + j] = 100 - round(occ_prob * 100.0 / 255.0); // Convert back to occupancy grid values

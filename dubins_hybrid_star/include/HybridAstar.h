@@ -50,7 +50,7 @@ public:
     vector<vector<int>> holonomicMotionCommands();
     vector<std::shared_ptr<planner::HolonomicNode>> holonomicCostsWithObstacles_planning(const std::shared_ptr<planner::Node> &GoalNode);
     std::shared_ptr<planner::HolonomicNode> getNode(int index, vector<std::shared_ptr<planner::HolonomicNode>> &goal_map_);
-    double eucledianCost(const vector<int> &holonomicMotionCommand);
+    double eucledianCost(const vector<int> &holonomicMotionCommand, const State &current_state);
 
 private:
     Grid_map grid_map_;
@@ -76,6 +76,8 @@ private:
     string green = "\033[1;32m";
     string red = "\033[1;31m";
     string blue = "\033[1;34m";
+    string yellow = "\033[1;33m";
+    string purple = "\033[1;35m";
     string reset = "\033[0m";
 
     const double HEADING_TOLERANCE = 0.05;
