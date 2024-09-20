@@ -12,9 +12,22 @@ public:
   GridMapPublisher()
       : Node("grid_map_publisher")
   {
+
+    this->declare_parameter<double>("resolution", 0.0);
+    this->declare_parameter<std::string>("grid_map_topic", "/grid_map");
+    this->declare_parameter<std::string>("image_dir", "/Home");
+    this->declare_parameter<std::string>("image_file", "map_maze.png");
+
+    this->get_parameter("resolution", resolution);
+    this->get_parameter("grid_map_topic", grid_map_topic);
+    this->get_parameter("image_dir", image_dir);
+    this->get_parameter("image_file", image_file);
+
+    // std::string image_dir = "/home/genis/personal/ros2_ws/src/hybrid_a_start/grid_map_publisher";
+    // std::string image_file = "map_maze.png";
+    // double resolution = 1.0; // in meter
+
     // Initialize grid map from image.
-    std::string image_dir = "/home/genis/personal/ros2_ws/src/hybrid_a_start/grid_map_publisher";
-    std::string image_file = "map_maze.png";
     image_dir.append("/" + image_file);
     cv::Mat img_src = cv::imread(image_dir, CV_8UC1);
     if (img_src.empty())
@@ -27,7 +40,6 @@ public:
     cv::Mat img_inverted;
     cv::bitwise_not(img_src, img_inverted);
 
-    double resolution = 1.0; // in meter
     grid_map_ = std::make_shared<grid_map::GridMap>(std::initializer_list<std::string>{"obstacle", "distance"});
     grid_map::GridMapCvConverter::initializeFromImage(
         img_inverted, resolution, *grid_map_, grid_map::Position::Zero());
@@ -50,11 +62,16 @@ public:
     grid_map_->setFrameId("map");
 
     // Set publisher.
-    publisher_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>("grid_map", 10);
+    publisher_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>(grid_map_topic, 10);
     timer_ = this->create_wall_timer(
         std::chrono::seconds(1), std::bind(&GridMapPublisher::publishGridMap, this));
 
     RCLCPP_INFO(this->get_logger(), "\033[1;32m----> Grid map initialized.\033[0m");
+
+    std::cout << blue << "resolution: " << resolution << reset << std::endl;
+    std::cout << blue << "grid_map_topic: " << grid_map_topic << reset << std::endl;
+    std::cout << blue << "image_dir: " << image_dir << reset << std::endl;
+    std::cout << blue << "image_file: " << image_file << reset << std::endl;
   }
 
 private:
@@ -89,6 +106,19 @@ private:
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr publisher_;
   rclcpp::TimerBase::SharedPtr timer_;
   std::shared_ptr<grid_map::GridMap> grid_map_;
+
+  std::string grid_map_topic;
+  double resolution;
+  std::string image_dir;
+  std::string image_file;
+
+  // colors for the terminal
+  std::string green = "\033[1;32m";
+  std::string red = "\033[1;31m";
+  std::string blue = "\033[1;34m";
+  std::string yellow = "\033[1;33m";
+  std::string purple = "\033[1;35m";
+  std::string reset = "\033[0m";
 };
 
 int main(int argc, char *argv[])
