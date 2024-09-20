@@ -1,0 +1,12 @@
+grid_map_publisher:
+  ros__parameters:
+    resolution: 1.0
+    grid_map_topic: "/grid_map"
+    image_dir: "/home/genis/personal/ros2_ws/src/hybrid_path_planning/grid_map_publisher"
+    image_file: "map_maze.png"
+
+map_inflate_node:
+  ros__parameters:
+    inflation_radius: 1.0
+    grid_map_topic_IN: "/grid_map"
+    grid_map_topic_OUT: "/grid_map_inflated"
