@@ -1,0 +1,5 @@
+map_inflate_node:
+  ros__parameters:
+    inflation_radius: 1.0
+    grid_map_topic_IN: "/grid_map"
+    grid_map_topic_OUT: "/grid_map_inflated"

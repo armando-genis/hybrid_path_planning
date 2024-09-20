@@ -328,6 +328,8 @@ double HybridAstar::eucledianCost(const vector<int> &holonomicMotionCommand)
 
 vector<std::shared_ptr<planner::HolonomicNode>> HybridAstar::holonomicCostsWithObstacles_planning(const std::shared_ptr<planner::Node> &GoalNode)
 {
+
+    auto init_time = std::chrono::system_clock::now();
     // Get the goal state. This already has the grid coordinates as gridx and gridy
     std::vector<std::shared_ptr<planner::HolonomicNode>> goal_map_;
 
@@ -408,6 +410,10 @@ vector<std::shared_ptr<planner::HolonomicNode>> HybridAstar::holonomicCostsWithO
     }
     // cout << blue << "goal cost max: " << goal_cost_max_ << reset << endl;
     // cout << blue << "count: " << count << reset << endl;
+
+    auto end_time = std::chrono::system_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
+    cout << blue << "Execution time holomonic: " << duration << " ms" << reset << endl;
 
     return goal_map_;
 }
