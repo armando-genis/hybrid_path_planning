@@ -19,7 +19,6 @@ def generate_launch_description():
         output='screen',
         parameters=[Map_paramsConfig], 
         additional_env={'RCUTILS_CONSOLE_OUTPUT_FORMAT': "{message}"}
-
     )
 
     publisher_node_map_inflate = launch_ros.actions.Node(

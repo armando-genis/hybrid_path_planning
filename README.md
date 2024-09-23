@@ -7,6 +7,13 @@
  colcon build --packages-select map_inflate
 
 
+
 ros2 launch dubins_hybrid_star dubins_hybrid.launch.py
 ros2 launch reeds_shepp_hybrid_astar reeds_hybrid.launch.py
 ros2 launch map_inflate map.launch.py
+
+
+
+Global 
+ros2 launch global_launcher reeds_shepp_hybrid.launch.py
+ros2 launch global_launcher dubins_hybrid.launch.py

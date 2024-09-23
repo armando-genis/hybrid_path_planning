@@ -212,9 +212,12 @@ void main_path_planning::hybridAstarPathPlanning()
 
     visualization_msgs::msg::MarkerArray marker_array_next;
     int id = 4000; // Unique ID for each marker
-    for (const auto &state : goal_trajectory)
+    size_t total_states = goal_trajectory.size();
+
+    for (size_t i = 0; i < goal_trajectory.size(); ++i)
     {
 
+        const auto &state = goal_trajectory[i];
         auto rotated_vehicle_poly = car_data_.getVehicleGeometry_state(state);
 
         visualization_msgs::msg::Marker car_polygon_marker;
@@ -225,9 +228,33 @@ void main_path_planning::hybridAstarPathPlanning()
         car_polygon_marker.id = id++;
         car_polygon_marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
         car_polygon_marker.scale.x = 0.07;
-        car_polygon_marker.color.r = 0.77;
-        car_polygon_marker.color.g = 0.45;
-        car_polygon_marker.color.b = 1.0;
+
+        // Calculate interpolation factor (0.0 to 1.0)
+        double t = (total_states > 1) ? static_cast<double>(i) / (total_states - 1) : 1.0;
+
+        // Initialize RGB values
+        double r = 0.0, g = 1.0, b = 0.0;
+
+        if (t < 0.5)
+        {
+            // Yellow to Green transition (first half)
+            double yellow_to_green_factor = t / 0.5;
+            r = 1.0 - yellow_to_green_factor; // Red decreases from 1 to 0
+            g = 1.0;                          // Green remains constant at 1
+            b = 0.0;                          // Blue stays at 0
+        }
+        else
+        {
+            // Green to Blue transition (second half)
+            double green_to_blue_factor = (t - 0.5) / 0.5;
+            r = 0.0;                        // Red remains constant at 0
+            g = 1.0 - green_to_blue_factor; // Green decreases from 1 to 0
+            b = green_to_blue_factor;       // Blue increases from 0 to 1
+        }
+
+        car_polygon_marker.color.r = r;
+        car_polygon_marker.color.g = g;
+        car_polygon_marker.color.b = b;
         car_polygon_marker.color.a = 1.0;
 
         std::vector<geometry_msgs::msg::Point> car_data_points;
@@ -291,8 +318,8 @@ void main_path_planning::Star_End_point_visualization()
         marker.scale.y = 0.3; // Width of the arrow shaft
         marker.scale.z = 0.3; // Height of the arrow shaft
 
-        marker.color.r = 0.11;
-        marker.color.g = 0.54;
+        marker.color.r = 1.0;
+        marker.color.g = 1.0;
         marker.color.b = 1.0;
         marker.color.a = 1.0;
 
