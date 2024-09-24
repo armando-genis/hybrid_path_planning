@@ -16,12 +16,13 @@ sudo apt install libopencv-dev
 
 **The Reeds-Shepp Hybrid A algorithm**: incorporates both forward and reverse motion to generate optimal paths for non-holonomic vehicles. It computes a set of possible steering angles and directions and simulates vehicle movement to evaluate potential trajectories, checking for collisions and boundary conditions in a grid map. Costs are calculated based on movement direction (forward or reverse), steering angle, and changes in direction, with higher penalties for reversing and sharp turns. Additionally, the algorithm includes a heuristic function for holonomic motion planning, where obstacles are considered when calculating costs, and it uses the Reeds-Shepp curve to optimize the path when no valid solution is found in a straightforward trajectory.
 
-![Reeds-Shepp-Curves Screenshot](https://github.com/armando-genis/hybrid_path_planning/tree/main/imgs/reeds_shepp.png)
+![Reeds-Shepp-Curves Screenshot](https://github.com/armando-genis/hybrid_path_planning/blob/main/imgs/reeds_shepp.png)
 
 
 **The Dubins Hybrid A algorithm**: generates paths using only forward motion, leveraging Dubins curves for optimal path planning with non-holonomic constraints. The algorithm simulates vehicle motion based on a set of forward-only steering commands, checking for collisions and computing the cost of each path based on steering angles and direction changes. A Dubins path is calculated between the current and goal nodes, and the cost is based on the length of the path and steering complexity. Additionally, a holonomic heuristic is used to account for obstacles and to optimize the path when standard Dubins paths are not feasible.
 
-![Dubins-Curves  Screenshot](https://github.com/armando-genis/hybrid_path_planning/tree/main/imgs/dubins.png)
+![Dubins-Curves Screenshot](https://github.com/armando-genis/hybrid_path_planning/raw/main/imgs/dubins.png)
+
 
  colcon build --packages-select dubins_hybrid_star
  colcon build --packages-select reeds_shepp_hybrid_astar
