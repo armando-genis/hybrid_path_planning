@@ -49,27 +49,6 @@ Visualization Manager:
       Value: true
     - Alpha: 0.699999988079071
       Class: rviz_default_plugins/Map
-      Color Scheme: map
-      Draw Behind: false
-      Enabled: true
-      Name: Map
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        Filter size: 10
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /grid_map
-      Update Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /grid_map_updates
-      Use Timestamp: false
-      Value: true
-    - Alpha: 0.699999988079071
-      Class: rviz_default_plugins/Map
       Color Scheme: costmap
       Draw Behind: false
       Enabled: true
@@ -93,7 +72,7 @@ Visualization Manager:
       Enabled: true
       Name: MarkerArray
       Namespaces:
-        next_state_polygons: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -105,7 +84,7 @@ Visualization Manager:
       Enabled: true
       Name: MarkerArray
       Namespaces:
-        next_state_arrows: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -117,7 +96,7 @@ Visualization Manager:
       Enabled: true
       Name: Marker
       Namespaces:
-        vehicle_polygon: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -128,7 +107,7 @@ Visualization Manager:
       Value: true
   Enabled: true
   Global Options:
-    Background Color: 48; 48; 48
+    Background Color: 0; 0; 0
     Fixed Frame: map
     Frame Rate: 30
   Name: root
@@ -179,9 +158,9 @@ Visualization Manager:
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -2.9317288398742676
-        Y: -9.828716278076172
-        Z: 0.5598132610321045
+        X: 5.390509128570557
+        Y: -5.972592353820801
+        Z: 0.5515085458755493
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false

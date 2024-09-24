@@ -70,29 +70,3 @@ State CarData::getVehicleStep(const State &state, double phi, double m, double d
         state.y + (m * dt * dy),
         state.heading + (m * dt * dtheta)};
 }
-
-// method to return the posistion base on the Car dynamics
-// State CarData::getVehicleStep(const State &state, double phi, double m, double dt)
-// {
-//     State new_state;
-
-//     double x = state.x;
-//     double y = state.y;
-//     double heading = state.heading;
-
-//     // car dynamics
-//     double dx = cos(state.heading);
-//     double dy = sin(state.heading);
-//     double dtheta = tan(phi) / wheelBase;
-
-//     // Update position and heading
-//     x += m * dt * dx;
-//     y += m * dt * dy;
-//     heading += m * dt * dtheta;
-
-//     new_state.x = x;
-//     new_state.y = y;
-//     new_state.heading = heading;
-
-//     return new_state;
-// }

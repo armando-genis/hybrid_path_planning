@@ -78,7 +78,7 @@ private:
     double step_car;
 
     double reverse = 10.0;
-    double directionChange = 200.0;
+    double directionChange = 250.0;
     double steerAngle = 15.0;
     double steerAngleChange = 20.0;
     double hybridCost = 30.0;
