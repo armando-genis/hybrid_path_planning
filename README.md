@@ -84,7 +84,7 @@ ros2 launch global_launcher dubins_hybrid.launch.py
 ```
 
 Notes:
-- ❗ Important: If you are publishing a map or using a specific grid map for planning, make sure to update the paths in the configuration file. This includes the image_dir and image_file paths for the grid_map_publisher. ❗
+- ❗ Important: If you are publishing a map or using a specific grid map for planning, make sure to update the paths in the configuration file. This includes the `image_dir` and `image_file` paths for the grid_map_publisher. ❗
 - Make sure your ROS2 environment is properly sourced before launching the files (source ~/ros2_ws/install/setup.bash).
 - You can modify the parameters in the config/global_launcher.yaml file to suit your vehicle and environment.
 - The planners require a grid map to operate, so ensure that a valid grid map is published to the specified topics (/grid_map_inflated).
