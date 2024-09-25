@@ -1,0 +1,10 @@
+reeds_shepp_path_planning_node:
+  ros__parameters:
+    maxSteerAngle: 0.6
+    wheelBase: 2.75
+    axleToFront: 1.1
+    axleToBack: 1.2
+    width: 1.9
+    pathLength: 4.0
+    step_car: 1.0
+    grid_map_topic: "/grid_map_inflated"
