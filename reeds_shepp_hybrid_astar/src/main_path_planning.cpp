@@ -89,21 +89,22 @@ void main_path_planning::start_point(const geometry_msgs::msg::PoseWithCovarianc
 
     auto rotated_vehicle_poly = car_data_.getVehicleGeometry_state(start_state_);
 
-    // // ckeck collision with isSingleStateCollisionFree
     // bool isCollision_new = grid_map_->isSingleStateCollisionFree(start_state_);
-    // cout << "isCollision_new: " << isCollision_new << endl;
+    // ckeck collision with isSingleStateCollisionFree
+    bool isCollision_new = grid_map_->isSingleStateCollisionFree(start_state_);
+    cout << "isCollision_new: " << isCollision_new << endl;
 
     // Check if the start point is within the map
     if (start_state_.x < grid_map_->getOriginX() || start_state_.x > grid_map_->getMaxOriginX() || start_state_.y < grid_map_->getOriginY() || start_state_.y > grid_map_->getMaxOriginY())
     {
         RCLCPP_ERROR(this->get_logger(), "\033[1;31mStart point is out of the map\033[0m");
-        return;
+        // return;
     }
 
     if (grid_map_->checkCollision(start_state_, rotated_vehicle_poly))
     {
         RCLCPP_ERROR(this->get_logger(), "\033[1;31mStart point is in collision\033[0m");
-        return;
+        // return;
     }
 
     visualization_msgs::msg::Marker car_polygon_marker;
