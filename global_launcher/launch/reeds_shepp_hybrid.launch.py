@@ -46,12 +46,21 @@ def generate_launch_description():
         arguments=['-d', LaunchConfiguration('rvizconfig')]
     )
 
+    # Static Transform Publisher (map -> odom)
+    static_tf_node = launch_ros.actions.Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='static_transform_publisher',
+        arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom'],
+        output='screen'
+    )
+
     
     return launch.LaunchDescription([
 
         launch.actions.DeclareLaunchArgument(name='rvizconfig', default_value=rviz_config_dir,
                                             description='Absolute path to rviz config file'),
-
+        # static_tf_node,
         publisher_node_grid_map,
         publisher_node_map_inflate,
         TimerAction(

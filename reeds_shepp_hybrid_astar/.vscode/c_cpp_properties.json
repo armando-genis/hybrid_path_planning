@@ -1,0 +1,26 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/genis/Desktop/hybrid_ws/install/reeds_shepp_hybrid_astar/include/**",
+        "/home/genis/Desktop/hybrid_ws/install/path_generator/include/**",
+        "/home/genis/Desktop/hybrid_ws/install/dubins_hybrid_star/include/**",
+        "/opt/ros/humble/include/**",
+        "/home/genis/Desktop/hybrid_ws/src/hybrid_path_planning/dubins_hybrid_star/include/**",
+        "/home/genis/Desktop/hybrid_ws/src/hybrid_path_planning/path_generator/include/**",
+        "/home/genis/Desktop/hybrid_ws/src/hybrid_path_planning/reeds_shepp_hybrid_astar/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

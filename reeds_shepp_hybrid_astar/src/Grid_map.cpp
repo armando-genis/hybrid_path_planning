@@ -22,6 +22,7 @@ Grid_map::Grid_map(const nav_msgs::msg::OccupancyGrid &map_data)
     // Initialize the GridMap object with "obstacle" and "distance" layers
     map_ = grid_map::GridMap(std::vector<std::string>{"obstacle", "distance"});
     map_.setFrameId(map_data.header.frame_id);
+
     map_.setGeometry(grid_map::Length(length_x, length_y), resolution, grid_map::Position(center_x, center_y));
 
     // Copy data from the occupancy grid to the "obstacle" layer
@@ -34,8 +35,9 @@ Grid_map::Grid_map(const nav_msgs::msg::OccupancyGrid &map_data)
     // Loop through the entire occupancy grid to populate the obstacle map
     for (int i = 0; i < map_data_.data.size(); ++i)
     {
-        int row = i / width; // Calculate row index
-        int col = i % width; // Calculate column index
+        // Invert row index to flip the image
+        int row = height - 1 - (i / width); // Flipping the row index
+        int col = i % width;                // Column index remains the same
 
         // Check if the grid is occupied (based on the threshold)
         if (map_data_.data[i] > free_thres_ || map_data_.data[i] < 0)
@@ -65,12 +67,23 @@ Grid_map::Grid_map(const nav_msgs::msg::OccupancyGrid &map_data)
     // Convert Eigen matrix to OpenCV Mat for saving as an image
     cv::Mat binary_map(binary.rows(), binary.cols(), CV_8UC1);
 
+    double resolution_map = map_.getResolution();
+    double half_res = resolution_map / 2.0;
+
+    // cout in green the resolution
+    cout << green << "Resolution: " << resolution_map << reset << endl;
+
     // Populate the OpenCV Mat from Eigen matrix (scaling 0 to 255 for visualization)
     for (int i = 0; i < binary.rows(); ++i)
     {
         for (int j = 0; j < binary.cols(); ++j)
         {
-            binary_map.at<uchar>(i, j) = binary(i, j) == 1 ? 0 : 255; // Invert the values
+            // Align the obstacles similarly as you did in createObstaclePolygon by adjusting to grid center
+            double x = j * resolution_map + half_res;
+            double y = i * resolution_map + half_res;
+
+            // Set binary map values for distanceTransform, 0 for obstacles and 255 for free space
+            binary_map.at<uchar>(i, j) = (binary(i, j) == 1) ? 0 : 255;
         }
     }
 
@@ -84,7 +97,7 @@ Grid_map::Grid_map(const nav_msgs::msg::OccupancyGrid &map_data)
     {
         for (int col = 0; col < distance_map_cv.cols; ++col)
         {
-            distanceData(row, col) = distance_map_cv.at<float>(row, col) * resolution; // Apply scaling by resolution
+            distanceData(row, col) = distance_map_cv.at<float>(row, col) * resolution_map; // Apply scaling by resolution
         }
     }
 
