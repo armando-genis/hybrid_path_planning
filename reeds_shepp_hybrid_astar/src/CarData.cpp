@@ -9,6 +9,8 @@ CarData::CarData(double maxSteerAngle, double wheelBase,
       axleToBack(axleToBack),
       width(width)
 {
+    // Set the circles around the vehicle
+    setCircles();
 }
 
 // Method to create the vehicle's geometry
@@ -69,4 +71,54 @@ State CarData::getVehicleStep(const State &state, double phi, double m, double d
         state.x + (m * dt * dx),
         state.y + (m * dt * dy),
         state.heading + (m * dt * dtheta)};
+}
+
+void CarData::setCircles()
+{
+    // Bounding circle
+    bounding_c_.x = (axleToFront - axleToBack) / 2.0;
+    bounding_c_.y = 0;
+    bounding_c_.r = sqrt(pow((axleToFront + axleToBack) / 2.0, 2) + pow(width / 2.0, 2));
+
+    // Define small circles for corners
+    double small_circle_shift = width / 4.0;
+    double small_circle_radius = sqrt(2 * pow(small_circle_shift, 2));
+
+    // Rear-left (rl) circle
+    circles_.emplace_back(-axleToBack + small_circle_shift, width / 2.0, small_circle_radius);
+    // Rear-right (rr) circle
+    circles_.emplace_back(-axleToBack + small_circle_shift, -width / 2.0, small_circle_radius);
+    // Front-left (fl) circle
+    circles_.emplace_back(axleToFront - small_circle_shift, width / 2.0, small_circle_radius);
+    // Front-right (fr) circle
+    circles_.emplace_back(axleToFront - small_circle_shift, -width / 2.0, small_circle_radius);
+
+    // cout circles seted in green
+    cout << green << "---> Circles created <---" << reset << endl;
+}
+
+std::vector<Circle> CarData::getCircles(const State &pos) const
+{
+    std::vector<Circle> result;
+    for (const auto &circle : circles_)
+    {
+        State state(circle.x, circle.y);
+        auto global_state = local2Global(pos, state);
+        result.emplace_back(global_state.x, global_state.y, circle.r);
+    }
+    return result;
+}
+
+Circle CarData::getBoundingCircle(const State &state) const
+{
+    auto global_center = local2Global(state, State(bounding_c_.x, bounding_c_.y));
+    return Circle(global_center.x, global_center.y, bounding_c_.r);
+}
+
+State CarData::local2Global(const State &reference, const State &target) const
+{
+    double x = target.x * cos(reference.heading) - target.y * sin(reference.heading) + reference.x;
+    double y = target.x * sin(reference.heading) + target.y * cos(reference.heading) + reference.y;
+    double z = reference.heading + target.heading;
+    return {x, y, z};
 }

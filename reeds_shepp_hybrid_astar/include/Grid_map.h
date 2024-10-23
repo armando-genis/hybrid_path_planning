@@ -1,6 +1,14 @@
 #ifndef GRID_MAP_H
 #define GRID_MAP_H
 
+#include <grid_map_core/grid_map_core.hpp>
+#include <opencv2/opencv.hpp>
+#include <grid_map_cv/grid_map_cv.hpp>
+#include "CarData.h"
+#include <Eigen/Dense>
+#include <iostream>
+#include "eigen2cv.hpp"
+
 #include <nav_msgs/msg/occupancy_grid.hpp>
 #include "sat_collision_checker.h"
 #include "State.h"
@@ -8,6 +16,7 @@
 #include <geometry_msgs/msg/point32.hpp>
 #include <vector>
 #include <iostream>
+#include <chrono>
 
 using namespace std;
 
@@ -35,6 +44,18 @@ private:
     // list of index of new vacant grid
     vector<int> new_vacancy_list_;
 
+    CarData car_data_;
+
+    // colors for the terminal
+    string green = "\033[1;32m";
+    string red = "\033[1;31m";
+    string blue = "\033[1;34m";
+    string yellow = "\033[1;33m";
+    string purple = "\033[1;35m";
+    string reset = "\033[0m";
+
+    grid_map::GridMap map_;
+
     geometry_msgs::msg::Polygon obstacle_poly; // Obstacle polygon
 
     fop::SATCollisionChecker collision_checker; // Collision checker
@@ -58,6 +79,15 @@ public:
     std::vector<geometry_msgs::msg::Polygon> getObstaclePolys() { return obstacle_polys; }
 
     bool checkCollision(const State &state, const geometry_msgs::msg::Polygon &vehicle_poly_state);
+
+    // ===================== NEW METHOD =====================
+    void setcarData(CarData car_data);
+    double getObstacleDistance(const Eigen::Vector2d &pos) const;
+    bool isInside(const Eigen::Vector2d &pos) const;
+    bool isSingleStateCollisionFree(const State &current);
+    bool isSingleStateCollisionFreeImproved(const State &current);
+    cv::Mat eigenToCvMat(const Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> &eigen_matrix);
+
     std::tuple<int, int> toCellID(State start_state);
     int toCellIndex(int x, int y);
     bool isPointInBounds(int x, int y);

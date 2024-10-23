@@ -72,6 +72,8 @@ private:
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr polygon_car_pub_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr arrow_pub_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr arrow_pah_pub_;
+    // cicles
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr circles_pub_;
 
 public:
     main_path_planning(/* args */);

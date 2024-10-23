@@ -32,6 +32,8 @@ main_path_planning::main_path_planning(/* args */) : Node("main_planner_node")
     polygon_car_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("/car_polygon", 10);
     arrow_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/start_and_end_arrows", 10);
 
+    circles_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/circles", 10);
+
     // Create the vehicle geometry
     car_data_ = CarData(maxSteerAngle, wheelBase, axleToFront, axleToBack, width);
     car_data_.createVehicleGeometry();
@@ -60,6 +62,8 @@ void main_path_planning::gridMapdata(const nav_msgs::msg::OccupancyGrid::SharedP
 {
     // Create the grid map
     grid_map_ = std::make_shared<Grid_map>(*map);
+    // set the car data
+    grid_map_->setcarData(car_data_);
 }
 
 // ###################################################
@@ -85,17 +89,21 @@ void main_path_planning::start_point(const geometry_msgs::msg::PoseWithCovarianc
 
     auto rotated_vehicle_poly = car_data_.getVehicleGeometry_state(start_state_);
 
+    // ckeck collision with isSingleStateCollisionFree
+    bool isCollision_new = grid_map_->isSingleStateCollisionFree(start_state_);
+    cout << "isCollision_new: " << isCollision_new << endl;
+
     // Check if the start point is within the map
     if (start_state_.x < grid_map_->getOriginX() || start_state_.x > grid_map_->getMaxOriginX() || start_state_.y < grid_map_->getOriginY() || start_state_.y > grid_map_->getMaxOriginY())
     {
         RCLCPP_ERROR(this->get_logger(), "\033[1;31mStart point is out of the map\033[0m");
-        return;
+        // return;
     }
 
     if (grid_map_->checkCollision(start_state_, rotated_vehicle_poly))
     {
         RCLCPP_ERROR(this->get_logger(), "\033[1;31mStart point is in collision\033[0m");
-        return;
+        // return;
     }
 
     visualization_msgs::msg::Marker car_polygon_marker;
@@ -123,6 +131,66 @@ void main_path_planning::start_point(const geometry_msgs::msg::PoseWithCovarianc
     polygon_car_pub_->publish(car_polygon_marker);
 
     start_point_received_ = true;
+
+    // circles
+    auto circles = car_data_.getCircles(start_state_);
+
+    // cout cirles x and y in blue color
+    for (size_t i = 0; i < circles.size(); ++i)
+    {
+        RCLCPP_INFO(this->get_logger(), "\033[1;34mCircle %d: x = %f, y = %f\033[0m", i, circles[i].x, circles[i].y);
+    }
+
+    // get the circles around the vehicle
+    auto main_circle = car_data_.getBoundingCircle(start_state_);
+
+    // Create a MarkerArray to store the circles
+    visualization_msgs::msg::MarkerArray circles_marker_array;
+
+    for (size_t i = 0; i < circles.size(); ++i)
+    {
+        visualization_msgs::msg::Marker circle_marker;
+        circle_marker.header.frame_id = "map";
+        circle_marker.header.stamp = this->now();
+        circle_marker.ns = "circles";
+        circle_marker.action = visualization_msgs::msg::Marker::ADD;
+        circle_marker.id = i;
+        circle_marker.type = visualization_msgs::msg::Marker::CYLINDER;
+        circle_marker.scale.x = circles[i].r * 2;
+        circle_marker.scale.y = circles[i].r * 2;
+        circle_marker.scale.z = 0.1;
+        circle_marker.color.r = 0.0;
+        circle_marker.color.g = 1.0;
+        circle_marker.color.b = 0.0;
+        circle_marker.color.a = 0.5;
+        circle_marker.pose.position.x = circles[i].x;
+        circle_marker.pose.position.y = circles[i].y;
+        circle_marker.pose.position.z = 0.05;
+        circles_marker_array.markers.push_back(circle_marker);
+    }
+
+    // Create a Marker for the main circle
+    visualization_msgs::msg::Marker main_circle_marker;
+    main_circle_marker.header.frame_id = "map";
+    main_circle_marker.header.stamp = this->now();
+    main_circle_marker.ns = "circles";
+    main_circle_marker.action = visualization_msgs::msg::Marker::ADD;
+    main_circle_marker.id = circles.size() + 1;
+    main_circle_marker.type = visualization_msgs::msg::Marker::CYLINDER;
+    main_circle_marker.scale.x = main_circle.r * 2;
+    main_circle_marker.scale.y = main_circle.r * 2;
+    main_circle_marker.scale.z = 0.1;
+    main_circle_marker.color.r = 0.0;
+    main_circle_marker.color.g = 1.0;
+    main_circle_marker.color.b = 0.0;
+    main_circle_marker.color.a = 0.5;
+    main_circle_marker.pose.position.x = main_circle.x;
+    main_circle_marker.pose.position.y = main_circle.y;
+    main_circle_marker.pose.position.z = 0.05;
+    circles_marker_array.markers.push_back(main_circle_marker);
+
+    // Publish the MarkerArray containing the circles
+    circles_pub_->publish(circles_marker_array);
 }
 
 // ###################################################

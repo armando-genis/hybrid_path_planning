@@ -1,9 +1,9 @@
 grid_map_publisher:
   ros__parameters:
-    resolution: 0.2
+    resolution: 1.0 # m/cell 0.2
     grid_map_topic: "/grid_map"
-    image_dir: "/home/genis/personal/ros2_ws/src/hybrid_path_planning/grid_map_publisher"
-    image_file: "gridmap.png"
+    image_dir: "/home/genis/Desktop/hybrid_ws/src/hybrid_path_planning/grid_map_publisher"
+    image_file: "map_maze.png"
 
 map_inflate_node:
   ros__parameters:

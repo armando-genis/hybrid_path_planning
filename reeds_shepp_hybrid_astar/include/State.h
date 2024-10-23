@@ -46,6 +46,15 @@ public:
     }
 };
 
+struct Circle
+{
+    Circle() = default;
+    Circle(double x, double y, double r) : x(x), y(y), r(r) {}
+    double x{};
+    double y{};
+    double r{};
+};
+
 struct StateHash
 {
     std::size_t operator()(const State &s) const

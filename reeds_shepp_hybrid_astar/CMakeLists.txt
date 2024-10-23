@@ -14,6 +14,10 @@ find_package(visualization_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(grid_map_ros REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(OpenCV REQUIRED)
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -36,7 +40,7 @@ add_executable(reeds_shepp_path_planning_node
                 src/reeds_shepp_path.cpp
               )
 
-ament_target_dependencies(reeds_shepp_path_planning_node rclcpp std_msgs geometry_msgs visualization_msgs tf2 tf2_geometry_msgs nav_msgs)
+ament_target_dependencies(reeds_shepp_path_planning_node rclcpp std_msgs geometry_msgs visualization_msgs tf2 tf2_geometry_msgs nav_msgs grid_map_ros Eigen3 OpenCV)
 
 target_include_directories(reeds_shepp_path_planning_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
