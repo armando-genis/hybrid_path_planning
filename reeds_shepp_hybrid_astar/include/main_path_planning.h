@@ -74,6 +74,8 @@ private:
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr arrow_pah_pub_;
     // cicles
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr circles_pub_;
+    // occupancy grid
+    rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr occupancy_grid_pub_;
 
 public:
     main_path_planning(/* args */);

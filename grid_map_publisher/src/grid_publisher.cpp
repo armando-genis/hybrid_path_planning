@@ -81,6 +81,7 @@ private:
     grid_map::GridMapRosConverter::toOccupancyGrid(
         *grid_map_, "obstacle", 0, 255, *occupancy_grid);
 
+    occupancy_grid->info.origin.orientation.w = 1.0;
     publisher_->publish(*occupancy_grid);
   }
 

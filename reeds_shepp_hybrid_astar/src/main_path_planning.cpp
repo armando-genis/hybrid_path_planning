@@ -34,6 +34,8 @@ main_path_planning::main_path_planning(/* args */) : Node("main_planner_node")
 
     circles_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/circles", 10);
 
+    occupancy_grid_pub_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>("/occupancy_grid_created", 10);
+
     // Create the vehicle geometry
     car_data_ = CarData(maxSteerAngle, wheelBase, axleToFront, axleToBack, width);
     car_data_.createVehicleGeometry();
@@ -89,7 +91,6 @@ void main_path_planning::start_point(const geometry_msgs::msg::PoseWithCovarianc
 
     auto rotated_vehicle_poly = car_data_.getVehicleGeometry_state(start_state_);
 
-    // bool isCollision_new = grid_map_->isSingleStateCollisionFree(start_state_);
     // ckeck collision with isSingleStateCollisionFree
     bool isCollision_new = grid_map_->isSingleStateCollisionFree(start_state_);
     cout << "isCollision_new: " << isCollision_new << endl;
@@ -192,6 +193,14 @@ void main_path_planning::start_point(const geometry_msgs::msg::PoseWithCovarianc
 
     // Publish the MarkerArray containing the circles
     circles_pub_->publish(circles_marker_array);
+
+    // get ocuppacy map from the grid_map
+    auto occupancy_grid = grid_map_->getObstaclesOccupancyGrid();
+    // set time stamp
+    occupancy_grid.header.stamp = this->now();
+
+    // Publish the occupancy grid
+    occupancy_grid_pub_->publish(occupancy_grid);
 }
 
 // ###################################################

@@ -36,8 +36,14 @@ Grid_map::Grid_map(const nav_msgs::msg::OccupancyGrid &map_data)
     for (int i = 0; i < map_data_.data.size(); ++i)
     {
         // Invert row index to flip the image
-        int row = height - 1 - (i / width); // Flipping the row index
-        int col = i % width;                // Column index remains the same
+        int row = i / width; // Calculate row index
+        int col = i % width; // Calculate column index
+
+        if (row < 0 || row >= obstacleData.rows() || col < 0 || col >= obstacleData.cols())
+        {
+            std::cerr << "Invalid matrix access at row: " << row << ", col: " << col << std::endl;
+            continue; // Prevent out-of-bounds access
+        }
 
         // Check if the grid is occupied (based on the threshold)
         if (map_data_.data[i] > free_thres_ || map_data_.data[i] < 0)
@@ -61,59 +67,13 @@ Grid_map::Grid_map(const nav_msgs::msg::OccupancyGrid &map_data)
     // Save the obstacle map as a PNG image using OpenCV
     cv::imwrite("obstacle_map.png", obstacle_map);
 
-    Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> binary =
-        map_.get("obstacle").cast<unsigned char>();
+    Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> binary = map_.get("obstacle").cast<unsigned char>();
 
-    // Convert Eigen matrix to OpenCV Mat for saving as an image
-    cv::Mat binary_map(binary.rows(), binary.cols(), CV_8UC1);
-
-    double resolution_map = map_.getResolution();
-    double half_res = resolution_map / 2.0;
-
-    // cout in green the resolution
-    cout << green << "Resolution: " << resolution_map << reset << endl;
-
-    // Populate the OpenCV Mat from Eigen matrix (scaling 0 to 255 for visualization)
-    for (int i = 0; i < binary.rows(); ++i)
-    {
-        for (int j = 0; j < binary.cols(); ++j)
-        {
-            // Align the obstacles similarly as you did in createObstaclePolygon by adjusting to grid center
-            double x = j * resolution_map + half_res;
-            double y = i * resolution_map + half_res;
-
-            // Set binary map values for distanceTransform, 0 for obstacles and 255 for free space
-            binary_map.at<uchar>(i, j) = (binary(i, j) == 1) ? 0 : 255;
-        }
-    }
-
-    // Step 2: Apply distance transform
-    cv::Mat distance_map_cv;
-    cv::distanceTransform(binary_map, distance_map_cv, cv::DIST_L2, cv::DIST_MASK_PRECISE);
-
-    // Step 3: Scale the distance map using resolution (optional)
-    grid_map::Matrix &distanceData = map_.get("distance");
-    for (int row = 0; row < distance_map_cv.rows; ++row)
-    {
-        for (int col = 0; col < distance_map_cv.cols; ++col)
-        {
-            distanceData(row, col) = distance_map_cv.at<float>(row, col) * resolution_map; // Apply scaling by resolution
-        }
-    }
-
-    // Step 4: Normalize the distance map for visualization
-    cv::Mat distance_map_vis;
-    cv::normalize(distance_map_cv, distance_map_vis, 0, 255, cv::NORM_MINMAX);
-    distance_map_vis.convertTo(distance_map_vis, CV_8UC1); // Convert to 8-bit for saving
-
-    // Step 5: Save the distance map as an image
-    cv::imwrite("distance_map.png", distance_map_vis);
-
-    // Debugging: Print out the maximum and minimum values of the distance map
-    double minVal, maxVal;
-    cv::minMaxLoc(distance_map_cv, &minVal, &maxVal);
-    // std::cout << "Raw Distance Transform: Min distance = " << minVal << ", Max distance = " << maxVal << std::endl;
-    // std::cout << "After scaling: Min distance = " << minVal * resolution << ", Max distance = " << maxVal * resolution << std::endl;
+    cv::Mat binary_cv = eigen2cv(binary);
+    cv::Mat distance_cv;
+    cv::distanceTransform(binary_cv, distance_cv, CV_DIST_L2, CV_DIST_MASK_PRECISE);
+    Eigen::MatrixXf distance = cv2eigen<float>(distance_cv);
+    map_.get("distance") *= resolution;
 }
 
 Grid_map::~Grid_map()
@@ -369,4 +329,38 @@ bool Grid_map::isSingleStateCollisionFreeImproved(const State &current)
         // If out of bounds, consider it a collision
         return false;
     }
+}
+
+nav_msgs::msg::OccupancyGrid Grid_map::getObstaclesOccupancyGrid()
+{
+    // Create an OccupancyGrid message
+    nav_msgs::msg::OccupancyGrid occupancy_grid;
+    occupancy_grid.info.resolution = resolution; // Set the resolution (cell size in meters)
+    occupancy_grid.info.width = width;           // Set the width in cells
+    occupancy_grid.info.height = height;         // Set the height in cells
+    occupancy_grid.info.origin.position.x = originX;
+    occupancy_grid.info.origin.position.y = originY;
+    occupancy_grid.info.origin.position.z = 0.0;    // Set the z position to 0
+    occupancy_grid.info.origin.orientation.w = 1.0; // No rotation, quaternion identity
+    occupancy_grid.header.frame_id = "map";         // Set frame id to "map" (or other if applicable)
+    // occupancy_grid.header.stamp = rclcpp::Clock().now();
+
+    // Initialize the occupancy grid data
+    occupancy_grid.data.resize(width * height, -1); // Initialize with unknown (-1) occupancy
+
+    // Copy the obstacle data from the GridMap to the OccupancyGrid
+    const grid_map::Matrix &obstacleData = map_["obstacle"];
+    for (size_t row = 0; row < height; ++row)
+    {
+        for (size_t col = 0; col < width; ++col)
+        {
+            // Convert the obstacle map values into occupancy grid format
+            // ROS OccupancyGrid expects:
+            //   -1 = Unknown, 0 = Free, 100 = Occupied
+            int8_t occupancy_value = obstacleData(row, col) > 0.5 ? 100 : 0; // Threshold to determine if occupied
+            occupancy_grid.data[row * width + col] = occupancy_value;
+        }
+    }
+
+    return occupancy_grid;
 }

@@ -7,7 +7,9 @@
 #include "CarData.h"
 #include <Eigen/Dense>
 #include <iostream>
-#include "eigen2cv.hpp"
+// #include "eigen2cv.hpp"
+#include <opencv2/imgproc.hpp>
+#include <opencv2/core/eigen.hpp>
 
 #include <nav_msgs/msg/occupancy_grid.hpp>
 #include "sat_collision_checker.h"
@@ -65,6 +67,25 @@ private:
     geometry_msgs::msg::Polygon createObstaclePolygon(double x, double y, double resolution) const;
     void updateMap();
 
+    cv::Mat eigen2cv(const Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> &matrix)
+    {
+        cv::Mat mat(matrix.rows(), matrix.cols(), CV_8UC1);
+        for (int i = 0; i < matrix.rows(); ++i)
+            for (int j = 0; j < matrix.cols(); ++j)
+                mat.at<unsigned char>(i, j) = matrix(i, j);
+        return mat;
+    }
+
+    template <typename T>
+    Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> cv2eigen(const cv::Mat &mat)
+    {
+        Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> matrix(mat.rows, mat.cols);
+        for (int i = 0; i < mat.rows; ++i)
+            for (int j = 0; j < mat.cols; ++j)
+                matrix(i, j) = mat.at<T>(i, j);
+        return matrix;
+    }
+
 public:
     Grid_map(const nav_msgs::msg::OccupancyGrid &map_data);
     ~Grid_map();
@@ -87,6 +108,8 @@ public:
     bool isSingleStateCollisionFree(const State &current);
     bool isSingleStateCollisionFreeImproved(const State &current);
     cv::Mat eigenToCvMat(const Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> &eigen_matrix);
+
+    nav_msgs::msg::OccupancyGrid getObstaclesOccupancyGrid();
 
     std::tuple<int, int> toCellID(State start_state);
     int toCellIndex(int x, int y);
