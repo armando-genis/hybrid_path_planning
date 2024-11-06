@@ -7,4 +7,4 @@ reeds_shepp_path_planning_node:
     width: 1.9
     pathLength: 4.0
     step_car: 1.0
-    grid_map_topic: "/grid_map"
+    grid_map_topic: "/grid_map_inflated"

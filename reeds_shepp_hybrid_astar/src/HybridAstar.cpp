@@ -50,8 +50,8 @@ vector<std::shared_ptr<planner::Node>> HybridAstar::GetnextNeighbours(const std:
             geometry_msgs::msg::Polygon next_state_vehicle_poly = car_data_.getVehicleGeometry_state(state);
 
             // ===============================> importa add a function to cheack if the state is inside the boundary of the map
-
-            if (grid_map_.checkCollision(state, next_state_vehicle_poly) || !grid_map_.isPointInBounds(state.gridx, state.gridy))
+            // if (grid_map_.checkCollision(state, next_state_vehicle_poly) || !grid_map_.isPointInBounds(state.gridx, state.gridy))
+            if (grid_map_.isSingleStateCollisionFree(state))
             {
                 // If any point in the trajectory collides, mark the collision and break out of the loop
                 has_collision = true;
@@ -176,7 +176,8 @@ std::shared_ptr<planner::Node> HybridAstar::reeds_shepp_Path_iterative(const std
             geometry_msgs::msg::Polygon next_state_vehicle_poly = car_data_.getVehicleGeometry_state(state);
 
             // Check for boundary and collision in the grid map
-            if (grid_map_.checkCollision(state, next_state_vehicle_poly) || !grid_map_.isPointInBounds(state.gridx, state.gridy))
+            // if (grid_map_.checkCollision(state, next_state_vehicle_poly) || !grid_map_.isPointInBounds(state.gridx, state.gridy))
+            if (grid_map_.isSingleStateCollisionFree(state))
             {
                 has_collision = true;
                 break;
@@ -253,7 +254,8 @@ std::shared_ptr<planner::Node> HybridAstar::reeds_shepp_Path_priority_queue(cons
             geometry_msgs::msg::Polygon next_state_vehicle_poly = car_data_.getVehicleGeometry_state(state);
 
             // Check if the state is inside the boundary and has no collisions
-            if (grid_map_.checkCollision(state, next_state_vehicle_poly) || !grid_map_.isPointInBounds(state.gridx, state.gridy))
+            // if (grid_map_.checkCollision(state, next_state_vehicle_poly) || !grid_map_.isPointInBounds(state.gridx, state.gridy))
+            if (grid_map_.isSingleStateCollisionFree(state))
             {
                 has_collision = true;
                 break; // Exit if collision is found

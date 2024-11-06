@@ -7,7 +7,9 @@
 #include "CarData.h"
 #include <Eigen/Dense>
 #include <iostream>
-#include "eigen2cv.hpp"
+// #include "eigen2cv.hpp"
+#include <opencv2/imgproc.hpp>
+#include <opencv2/core/eigen.hpp>
 
 #include <nav_msgs/msg/occupancy_grid.hpp>
 #include "sat_collision_checker.h"
@@ -65,6 +67,20 @@ private:
     geometry_msgs::msg::Polygon createObstaclePolygon(double x, double y, double resolution) const;
     void updateMap();
 
+    cv::Mat eigen2cv(const Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> &matrix)
+    {
+        cv::Mat mat(matrix.rows(), matrix.cols(), CV_8UC1, (void*)matrix.data(), matrix.outerStride());
+        return mat.clone(); // Clone to ensure the data is copied
+    }
+
+    template <typename T>
+    Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> cv2eigen(const cv::Mat &mat)
+    {
+        Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> matrix;
+        cv::cv2eigen(mat, matrix);
+        return matrix;
+    }
+
 public:
     Grid_map(const nav_msgs::msg::OccupancyGrid &map_data);
     ~Grid_map();
@@ -77,7 +93,6 @@ public:
     double getMaxOriginX() { return Max_origin_x; }
     double getMaxOriginY() { return Max_origin_y; }
     std::vector<geometry_msgs::msg::Polygon> getObstaclePolys() { return obstacle_polys; }
-
     bool checkCollision(const State &state, const geometry_msgs::msg::Polygon &vehicle_poly_state);
 
     // ===================== NEW METHOD =====================

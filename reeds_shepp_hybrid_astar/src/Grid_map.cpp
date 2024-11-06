@@ -11,109 +11,73 @@ Grid_map::Grid_map(const nav_msgs::msg::OccupancyGrid &map_data)
     Max_origin_x = originX + width * resolution;
     Max_origin_y = originY + height * resolution;
 
-    // // Compute the length of the map in meters
-    // double length_x = width * resolution;
-    // double length_y = height * resolution;
+    // Compute the length of the map in meters
+    double length_x = width * resolution;
+    double length_y = height * resolution;
 
-    // // Compute the center position of the map
-    // double center_x = originX + length_x / 2.0;
-    // double center_y = originY + length_y / 2.0;
+    // Compute the center position of the map
+    double center_x = originX + length_x / 2.0;
+    double center_y = originY + length_y / 2.0;
 
-    // // Initialize the GridMap object with "obstacle" and "distance" layers
-    // map_ = grid_map::GridMap(std::vector<std::string>{"obstacle", "distance"});
-    // map_.setFrameId(map_data.header.frame_id);
+    // Initialize the GridMap object with "obstacle" and "distance" layers
+    map_ = grid_map::GridMap({"obstacle", "distance"});
+    map_.setFrameId(map_data.header.frame_id);
+    map_.setGeometry(grid_map::Length(length_x, length_y), resolution, grid_map::Position(center_x, center_y));
 
-    // map_.setGeometry(grid_map::Length(length_x, length_y), resolution, grid_map::Position(center_x, center_y));
+    // Copy data from the occupancy grid to the "obstacle" layer
+    grid_map::Matrix &obstacleData = map_["obstacle"];
+    obstacleData.setConstant(map_.getSize()(0), map_.getSize()(1), 1.0);
 
-    // // Copy data from the occupancy grid to the "obstacle" layer
-    // grid_map::Matrix &obstacleData = map_["obstacle"];
-    // obstacleData.setConstant(height, width, 0.0); // Initialize with free space (0 = free)
+    cv::Mat obstacle_map(map_.getSize()(1), map_.getSize()(0), CV_8UC1, cv::Scalar(255));
 
-    // // Create OpenCV matrix for visualization (optional)
-    // cv::Mat obstacle_map(height, width, CV_8UC1, cv::Scalar(255)); // All cells initialized as free (255)
+    // Loop through the occupancy grid to populate the obstacle map
+    auto mapDataIter = map_data_.data.begin();
+    for (unsigned int y = 0; y < map_.getSize()(1); ++y)
+    {
+        for (unsigned int x = 0; x < map_.getSize()(0); ++x)
+        {
+            if (*mapDataIter > free_thres_ || *mapDataIter < 0)
+            {
+                obstacleData(x, y) = 0.0;
+                obstacle_map.at<uchar>(y, x) = 0;
+            }
+            else
+            {
+                obstacleData(x, y) = 1.0;
+                obstacle_map.at<uchar>(y, x) = 255;
+            }
+            ++mapDataIter;
+        }
+    }
 
-    // // Loop through the entire occupancy grid to populate the obstacle map
-    // for (int i = 0; i < map_data_.data.size(); ++i)
-    // {
-    //     // Invert row index to flip the image
-    //     int row = height - 1 - (i / width); // Flipping the row index
-    //     int col = i % width;                // Column index remains the same
-
-    //     // Check if the grid is occupied (based on the threshold)
-    //     if (map_data_.data[i] > free_thres_ || map_data_.data[i] < 0)
-    //     {
-    //         // Mark the cell as occupied in the GridMap (1 = obstacle)
-    //         obstacleData(row, col) = 1.0;
-
-    //         // Mark the cell as occupied in OpenCV image (0 = obstacle)
-    //         obstacle_map.at<uchar>(row, col) = 0;
-    //     }
-    //     else
-    //     {
-    //         // Mark free space (0 = free)
-    //         obstacleData(row, col) = 0.0;
-
-    //         // Mark the cell as free in OpenCV image (255 = free)
-    //         obstacle_map.at<uchar>(row, col) = 255;
-    //     }
-    // }
-
-    // // Save the obstacle map as a PNG image using OpenCV
     // cv::imwrite("obstacle_map.png", obstacle_map);
 
-    // Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> binary =
-    //     map_.get("obstacle").cast<unsigned char>();
+    // Convert obstacle data to binary image for distance transform
+    Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> binary = obstacleData.cast<unsigned char>();
 
-    // // Convert Eigen matrix to OpenCV Mat for saving as an image
-    // cv::Mat binary_map(binary.rows(), binary.cols(), CV_8UC1);
+    // Convert Eigen matrix to cv::Mat using OpenCV's function
+    cv::Mat binary_cv;
+    cv::eigen2cv(binary, binary_cv);
 
-    // double resolution_map = map_.getResolution();
-    // double half_res = resolution_map / 2.0;
+    // Compute the distance transform
+    cv::Mat distance_cv;
+    cv::distanceTransform(binary_cv, distance_cv, cv::DIST_L2, cv::DIST_MASK_PRECISE);
 
-    // // cout in green the resolution
-    // cout << green << "Resolution: " << resolution_map << reset << endl;
+    // Flip the distance_cv both vertically and horizontally (rotate 180 degrees)
+    cv::flip(distance_cv, distance_cv, -1);
 
-    // // Populate the OpenCV Mat from Eigen matrix (scaling 0 to 255 for visualization)
-    // for (int i = 0; i < binary.rows(); ++i)
-    // {
-    //     for (int j = 0; j < binary.cols(); ++j)
-    //     {
-    //         // Align the obstacles similarly as you did in createObstaclePolygon by adjusting to grid center
-    //         double x = j * resolution_map + half_res;
-    //         double y = i * resolution_map + half_res;
+    // Convert cv::Mat to Eigen matrix
+    Eigen::MatrixXf distance;
+    cv::cv2eigen(distance_cv, distance);
 
-    //         // Set binary map values for distanceTransform, 0 for obstacles and 255 for free space
-    //         binary_map.at<uchar>(i, j) = (binary(i, j) == 1) ? 0 : 255;
-    //     }
-    // }
+    // Assign the computed distance back to the "distance" layer
+    map_["distance"] = distance * resolution;
 
-    // // Step 2: Apply distance transform
-    // cv::Mat distance_map_cv;
-    // cv::distanceTransform(binary_map, distance_map_cv, cv::DIST_L2, cv::DIST_MASK_PRECISE);
-
-    // // Step 3: Scale the distance map using resolution (optional)
-    // grid_map::Matrix &distanceData = map_.get("distance");
-    // for (int row = 0; row < distance_map_cv.rows; ++row)
-    // {
-    //     for (int col = 0; col < distance_map_cv.cols; ++col)
-    //     {
-    //         distanceData(row, col) = distance_map_cv.at<float>(row, col) * resolution_map; // Apply scaling by resolution
-    //     }
-    // }
-
-    // // Step 4: Normalize the distance map for visualization
-    // cv::Mat distance_map_vis;
-    // cv::normalize(distance_map_cv, distance_map_vis, 0, 255, cv::NORM_MINMAX);
-    // distance_map_vis.convertTo(distance_map_vis, CV_8UC1); // Convert to 8-bit for saving
-
-    // // Step 5: Save the distance map as an image
-    // cv::imwrite("distance_map.png", distance_map_vis);
-
-    // // Debugging: Print out the maximum and minimum values of the distance map
-    // double minVal, maxVal;
-    // cv::minMaxLoc(distance_map_cv, &minVal, &maxVal);
-    // // std::cout << "Raw Distance Transform: Min distance = " << minVal << ", Max distance = " << maxVal << std::endl;
-    // // std::cout << "After scaling: Min distance = " << minVal * resolution << ", Max distance = " << maxVal * resolution << std::endl;
+    // Save the distance map for visualization
+    // cv::Mat distance_visual;
+    // cv::normalize(distance_cv, distance_visual, 0, 255, cv::NORM_MINMAX);
+    // distance_visual.convertTo(distance_visual, CV_8UC1);
+    // cv::imwrite("distance_map.png", distance_visual);
 }
 
 Grid_map::~Grid_map()
@@ -145,7 +109,6 @@ void Grid_map::updateMap()
 
 bool Grid_map::checkCollision(const State &state, const geometry_msgs::msg::Polygon &vehicle_poly_state)
 {
-    auto init_time = std::chrono::system_clock::now();
 
     obstacle_polys.clear(); // Clear the obstacle polygons
     // Define the 5 meter offset
@@ -174,27 +137,20 @@ bool Grid_map::checkCollision(const State &state, const geometry_msgs::msg::Poly
                 double x = originX + j * resolution;
                 double y = originY + i * resolution;
                 geometry_msgs::msg::Polygon poly = createObstaclePolygon(x, y, resolution);
-                // log the obstacle polygon
-                // for (const auto &point : poly.points)
-                // {
-                //     cout << "x: " << point.x << " y: " << point.y << endl;
-                // }
+
                 obstacle_polys.push_back(poly);
 
                 if (collision_checker.check_collision(vehicle_poly_state, poly))
                 {
-                    auto end_time = std::chrono::system_clock::now();
-                    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
-                    cout << purple << "--> Execution time checl collision: " << duration << " ms" << reset << endl;
                     return true; // Collision detected
                 }
             }
         }
     }
 
-    auto end_time = std::chrono::system_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
-    cout << purple << "--> Execution time checl collision: " << duration << " ms" << reset << endl;
+    // auto end_time = std::chrono::system_clock::now();
+    // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
+    // cout << purple << "--> Execution time checl collision: " << duration << " ms" << reset << endl;
 
     return false; // No collision detected
 }
@@ -282,7 +238,7 @@ bool Grid_map::isInside(const Eigen::Vector2d &pos) const
 
 bool Grid_map::isSingleStateCollisionFree(const State &current)
 {
-    auto init_time = std::chrono::system_clock::now();
+    // auto init_time = std::chrono::system_clock::now();
 
     // Get the vehicle footprint as circles in global coordinates
     std::vector<Circle> footprint = car_data_.getCircles(current);
@@ -293,49 +249,38 @@ bool Grid_map::isSingleStateCollisionFree(const State &current)
         // Create a position based on the circle's center
         Eigen::Vector2d pos(circle_itr.x, circle_itr.y);
 
-        // cout the position in blue
-        cout << blue << "Position: " << pos.transpose() << reset << endl;
-        // cout the radius in blue
-        cout << blue << "Radius: " << circle_itr.r << reset << endl;
-
         // Check if the circle is inside the map bounds
         if (isInside(pos))
         {
             // Get the clearance (distance to nearest obstacle)
             double clearance = getObstacleDistance(pos);
 
-            // cout the clearance in yellow
-            cout << yellow << "Clearance: " << clearance << reset << endl;
-
             // If the clearance is less than the circle's radius, it means a collision
             if (clearance < circle_itr.r)
             {
-                cout << red << "Collision detected by clearance < circle_itr.r" << reset << endl;
-                auto end_time = std::chrono::system_clock::now();
-                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
-                cout << purple << "--> Execution time check collision new version: " << duration << " ms" << reset << endl;
+                // auto end_time = std::chrono::system_clock::now();
+                // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
+                // cout << purple << "--> Execution time check collision new version: " << duration << " ms" << reset << endl;
 
-                return false; // Collision detected
+                return true; // Collision detected
             }
         }
         else
         {
+            // auto end_time = std::chrono::system_clock::now();
+            // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
+            // cout << purple << "--> Execution time check collision new version: " << duration << " ms" << reset << endl;
             // If out of bounds, consider it a collision
-            cout << red << "Collision detected by out of bounds" << reset << endl;
-            auto end_time = std::chrono::system_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
-            cout << purple << "--> Execution time check collision new version: " << duration << " ms" << reset << endl;
-
-            return false;
+            return true;
         }
     }
 
-    auto end_time = std::chrono::system_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
-    cout << purple << "--> Execution time check collision new version: " << duration << " ms" << reset << endl;
+    // auto end_time = std::chrono::system_clock::now();
+    // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
+    // cout << purple << "--> Execution time check collision new version: " << duration << " ms" << reset << endl;
 
     // No collision detected after checking all circles
-    return true;
+    return false;
 }
 
 bool Grid_map::isSingleStateCollisionFreeImproved(const State &current)
