@@ -93,29 +93,28 @@ void main_path_planning::start_point(const geometry_msgs::msg::PoseWithCovarianc
 
 
     // Check if the start point is within the map
-    if (start_state_.x < grid_map_->getOriginX() || start_state_.x > grid_map_->getMaxOriginX() || start_state_.y < grid_map_->getOriginY() || start_state_.y > grid_map_->getMaxOriginY())
-    {
-        RCLCPP_ERROR(this->get_logger(), "\033[1;31mStart point is out of the map\033[0m");
-        return;
-    }
+    // if (start_state_.x < grid_map_->getOriginX() || start_state_.x > grid_map_->getMaxOriginX() || start_state_.y < grid_map_->getOriginY() || start_state_.y > grid_map_->getMaxOriginY())
+    // {
+    //     RCLCPP_ERROR(this->get_logger(), "\033[1;31mStart point is out of the map\033[0m");
+    //     return;
+    // }
 
     // ckeck collision with isSingleStateCollisionFree
     bool isCollision_new = grid_map_->isSingleStateCollisionFree(start_state_);
-    cout << "isCollision_new: " << isCollision_new << endl;
     if (isCollision_new)
     {
-        RCLCPP_ERROR(this->get_logger(), "\033[1;31mStart point is in collision (new method)\033[0m");
-        // return;
-    }
-
-    bool isCollison = grid_map_->checkCollision(start_state_, rotated_vehicle_poly);
-    cout << "isCollison: " << isCollison << endl;
-
-    if (isCollison)
-    {
-        RCLCPP_ERROR(this->get_logger(), "\033[1;31mStart point is in collision\033[0m");
+        RCLCPP_ERROR(this->get_logger(), "\033[1;31m --> Start point is in collision or out of the map <-- \033[0m");
         return;
     }
+
+    // bool isCollison = grid_map_->checkCollision(start_state_, rotated_vehicle_poly);
+    // cout << "isCollison: " << isCollison << endl;
+
+    // if (isCollison)
+    // {
+    //     RCLCPP_ERROR(this->get_logger(), "\033[1;31mStart point is in collision\033[0m");
+    //     return;
+    // }
 
     visualization_msgs::msg::Marker car_polygon_marker;
     car_polygon_marker.header.frame_id = "map";
@@ -235,15 +234,22 @@ void main_path_planning::goal_point(const geometry_msgs::msg::PoseStamped::Share
     auto rotated_vehicle_poly = car_data_.getVehicleGeometry_state(goal_state_);
 
     // Check if the start point is within the map
-    if (goal_state_.x < grid_map_->getOriginX() || goal_state_.x > grid_map_->getMaxOriginX() || goal_state_.y < grid_map_->getOriginY() || goal_state_.y > grid_map_->getMaxOriginY())
-    {
-        RCLCPP_ERROR(this->get_logger(), "\033[1;31mStart point is out of the map\033[0m");
-        return;
-    }
+    // if (goal_state_.x < grid_map_->getOriginX() || goal_state_.x > grid_map_->getMaxOriginX() || goal_state_.y < grid_map_->getOriginY() || goal_state_.y > grid_map_->getMaxOriginY())
+    // {
+    //     RCLCPP_ERROR(this->get_logger(), "\033[1;31mStart point is out of the map\033[0m");
+    //     return;
+    // }
 
-    if (grid_map_->checkCollision(goal_state_, rotated_vehicle_poly))
+    // if (grid_map_->checkCollision(goal_state_, rotated_vehicle_poly))
+    // {
+    //     RCLCPP_ERROR(this->get_logger(), "\033[1;31mGoal point is in collision\033[0m");
+    //     return;
+    // }
+
+    bool isCollision_new = grid_map_->isSingleStateCollisionFree(goal_state_);
+    if (isCollision_new)
     {
-        RCLCPP_ERROR(this->get_logger(), "\033[1;31mGoal point is in collision\033[0m");
+        RCLCPP_ERROR(this->get_logger(), "\033[1;31m --> Goal point is in collision or out of the map <--\033[0m");
         return;
     }
 
