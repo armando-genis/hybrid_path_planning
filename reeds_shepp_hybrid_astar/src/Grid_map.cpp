@@ -109,7 +109,7 @@ void Grid_map::updateMap()
 
 bool Grid_map::checkCollision(const State &state, const geometry_msgs::msg::Polygon &vehicle_poly_state)
 {
-    auto init_time = std::chrono::system_clock::now();
+    // auto init_time = std::chrono::system_clock::now();
 
     obstacle_polys.clear(); // Clear the obstacle polygons
     // Define the 5 meter offset
@@ -147,18 +147,18 @@ bool Grid_map::checkCollision(const State &state, const geometry_msgs::msg::Poly
 
                 if (collision_checker.check_collision(vehicle_poly_state, poly))
                 {
-                    auto end_time = std::chrono::system_clock::now();
-                    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
-                    cout << purple << "--> Execution time checl collision: " << duration << " ms" << reset << endl;
+                    // auto end_time = std::chrono::system_clock::now();
+                    // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
+                    // cout << purple << "--> Execution time checl collision: " << duration << " ms" << reset << endl;
                     return true; // Collision detected
                 }
             }
         }
     }
 
-    auto end_time = std::chrono::system_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
-    cout << purple << "--> Execution time checl collision: " << duration << " ms" << reset << endl;
+    // auto end_time = std::chrono::system_clock::now();
+    // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
+    // cout << purple << "--> Execution time checl collision: " << duration << " ms" << reset << endl;
 
     return false; // No collision detected
 }
@@ -246,7 +246,7 @@ bool Grid_map::isInside(const Eigen::Vector2d &pos) const
 
 bool Grid_map::isSingleStateCollisionFree(const State &current)
 {
-    auto init_time = std::chrono::system_clock::now();
+    // auto init_time = std::chrono::system_clock::now();
 
     // Get the vehicle footprint as circles in global coordinates
     std::vector<Circle> footprint = car_data_.getCircles(current);
@@ -258,9 +258,9 @@ bool Grid_map::isSingleStateCollisionFree(const State &current)
         Eigen::Vector2d pos(circle_itr.x, circle_itr.y);
 
         // cout the position in blue
-        cout << blue << "Position: " << pos.transpose() << reset << endl;
+        // cout << blue << "Position: " << pos.transpose() << reset << endl;
         // cout the radius in blue
-        cout << blue << "Radius: " << circle_itr.r << reset << endl;
+        // cout << blue << "Radius: " << circle_itr.r << reset << endl;
 
         // Check if the circle is inside the map bounds
         if (isInside(pos))
@@ -269,37 +269,37 @@ bool Grid_map::isSingleStateCollisionFree(const State &current)
             double clearance = getObstacleDistance(pos);
 
             // cout the clearance in yellow
-            cout << yellow << "Clearance: " << clearance << reset << endl;
+            // cout << yellow << "Clearance: " << clearance << reset << endl;
 
             // If the clearance is less than the circle's radius, it means a collision
             if (clearance < circle_itr.r)
             {
-                cout << red << "Collision detected by clearance < circle_itr.r" << reset << endl;
-                auto end_time = std::chrono::system_clock::now();
-                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
-                cout << purple << "--> Execution time check collision new version: " << duration << " ms" << reset << endl;
+                // cout << red << "Collision detected by clearance < circle_itr.r" << reset << endl;
+                // auto end_time = std::chrono::system_clock::now();
+                // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
+                // cout << purple << "--> Execution time check collision new version: " << duration << " ms" << reset << endl;
 
-                return false; // Collision detected
+                return true; // Collision detected
             }
         }
         else
         {
             // If out of bounds, consider it a collision
-            cout << red << "Collision detected by out of bounds" << reset << endl;
-            auto end_time = std::chrono::system_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
-            cout << purple << "--> Execution time check collision new version: " << duration << " ms" << reset << endl;
+            // cout << red << "Collision detected by out of bounds" << reset << endl;
+            // auto end_time = std::chrono::system_clock::now();
+            // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
+            // cout << purple << "--> Execution time check collision new version: " << duration << " ms" << reset << endl;
 
-            return false;
+            return true;
         }
     }
 
-    auto end_time = std::chrono::system_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
-    cout << purple << "--> Execution time check collision new version: " << duration << " ms" << reset << endl;
+    // auto end_time = std::chrono::system_clock::now();
+    // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
+    // cout << purple << "--> Execution time check collision new version: " << duration << " ms" << reset << endl;
 
     // No collision detected after checking all circles
-    return true;
+    return false;
 }
 
 bool Grid_map::isSingleStateCollisionFreeImproved(const State &current)
