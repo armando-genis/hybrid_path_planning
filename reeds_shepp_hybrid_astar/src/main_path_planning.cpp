@@ -195,12 +195,12 @@ void main_path_planning::start_point(const geometry_msgs::msg::PoseWithCovarianc
     circles_pub_->publish(circles_marker_array);
 
     // get ocuppacy map from the grid_map
-    auto occupancy_grid = grid_map_->getObstaclesOccupancyGrid();
+    // auto occupancy_grid = grid_map_->getObstaclesOccupancyGrid();
     // set time stamp
-    occupancy_grid.header.stamp = this->now();
+    // occupancy_grid.header.stamp = this->now();
 
     // Publish the occupancy grid
-    occupancy_grid_pub_->publish(occupancy_grid);
+    // occupancy_grid_pub_->publish(occupancy_grid);
 }
 
 // ###################################################

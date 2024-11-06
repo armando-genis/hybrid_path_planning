@@ -20,60 +20,64 @@ Grid_map::Grid_map(const nav_msgs::msg::OccupancyGrid &map_data)
     double center_y = originY + length_y / 2.0;
 
     // Initialize the GridMap object with "obstacle" and "distance" layers
-    map_ = grid_map::GridMap(std::vector<std::string>{"obstacle", "distance"});
+    map_ = grid_map::GridMap({"obstacle", "distance"});
     map_.setFrameId(map_data.header.frame_id);
-
     map_.setGeometry(grid_map::Length(length_x, length_y), resolution, grid_map::Position(center_x, center_y));
 
     // Copy data from the occupancy grid to the "obstacle" layer
     grid_map::Matrix &obstacleData = map_["obstacle"];
-    obstacleData.setConstant(height, width, 0.0); // Initialize with free space (0 = free)
+    obstacleData.setConstant(map_.getSize()(0), map_.getSize()(1), 1.0);
 
-    // Create OpenCV matrix for visualization (optional)
-    cv::Mat obstacle_map(height, width, CV_8UC1, cv::Scalar(255)); // All cells initialized as free (255)
+    cv::Mat obstacle_map(map_.getSize()(1), map_.getSize()(0), CV_8UC1, cv::Scalar(255));
 
-    // Loop through the entire occupancy grid to populate the obstacle map
-    for (int i = 0; i < map_data_.data.size(); ++i)
+    // Loop through the occupancy grid to populate the obstacle map
+    auto mapDataIter = map_data_.data.begin();
+    for (unsigned int y = 0; y < map_.getSize()(1); ++y)
     {
-        // Invert row index to flip the image
-        int row = i / width; // Calculate row index
-        int col = i % width; // Calculate column index
-
-        if (row < 0 || row >= obstacleData.rows() || col < 0 || col >= obstacleData.cols())
+        for (unsigned int x = 0; x < map_.getSize()(0); ++x)
         {
-            std::cerr << "Invalid matrix access at row: " << row << ", col: " << col << std::endl;
-            continue; // Prevent out-of-bounds access
-        }
-
-        // Check if the grid is occupied (based on the threshold)
-        if (map_data_.data[i] > free_thres_ || map_data_.data[i] < 0)
-        {
-            // Mark the cell as occupied in the GridMap (1 = obstacle)
-            obstacleData(row, col) = 1.0;
-
-            // Mark the cell as occupied in OpenCV image (0 = obstacle)
-            obstacle_map.at<uchar>(row, col) = 0;
-        }
-        else
-        {
-            // Mark free space (0 = free)
-            obstacleData(row, col) = 0.0;
-
-            // Mark the cell as free in OpenCV image (255 = free)
-            obstacle_map.at<uchar>(row, col) = 255;
+            if (*mapDataIter > free_thres_ || *mapDataIter < 0)
+            {
+                obstacleData(x, y) = 0.0;
+                obstacle_map.at<uchar>(y, x) = 0;
+            }
+            else
+            {
+                obstacleData(x, y) = 1.0;
+                obstacle_map.at<uchar>(y, x) = 255;
+            }
+            ++mapDataIter;
         }
     }
 
-    // Save the obstacle map as a PNG image using OpenCV
     cv::imwrite("obstacle_map.png", obstacle_map);
 
-    Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> binary = map_.get("obstacle").cast<unsigned char>();
+    // Convert obstacle data to binary image for distance transform
+    Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> binary = obstacleData.cast<unsigned char>();
 
-    cv::Mat binary_cv = eigen2cv(binary);
+    // Convert Eigen matrix to cv::Mat using OpenCV's function
+    cv::Mat binary_cv;
+    cv::eigen2cv(binary, binary_cv);
+
+    // Compute the distance transform
     cv::Mat distance_cv;
-    cv::distanceTransform(binary_cv, distance_cv, CV_DIST_L2, CV_DIST_MASK_PRECISE);
-    Eigen::MatrixXf distance = cv2eigen<float>(distance_cv);
-    map_.get("distance") *= resolution;
+    cv::distanceTransform(binary_cv, distance_cv, cv::DIST_L2, cv::DIST_MASK_PRECISE);
+
+    // Flip the distance_cv both vertically and horizontally (rotate 180 degrees)
+    cv::flip(distance_cv, distance_cv, -1);
+
+    // Convert cv::Mat to Eigen matrix
+    Eigen::MatrixXf distance;
+    cv::cv2eigen(distance_cv, distance);
+
+    // Assign the computed distance back to the "distance" layer
+    map_["distance"] = distance * resolution;
+
+    // Save the distance map for visualization
+    cv::Mat distance_visual;
+    cv::normalize(distance_cv, distance_visual, 0, 255, cv::NORM_MINMAX);
+    distance_visual.convertTo(distance_visual, CV_8UC1);
+    cv::imwrite("distance_map.png", distance_visual);
 }
 
 Grid_map::~Grid_map()
@@ -349,7 +353,7 @@ nav_msgs::msg::OccupancyGrid Grid_map::getObstaclesOccupancyGrid()
     occupancy_grid.data.resize(width * height, -1); // Initialize with unknown (-1) occupancy
 
     // Copy the obstacle data from the GridMap to the OccupancyGrid
-    const grid_map::Matrix &obstacleData = map_["obstacle"];
+    const grid_map::Matrix &obstacleData = map_["distance"];
     for (size_t row = 0; row < height; ++row)
     {
         for (size_t col = 0; col < width; ++col)

@@ -69,20 +69,15 @@ private:
 
     cv::Mat eigen2cv(const Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> &matrix)
     {
-        cv::Mat mat(matrix.rows(), matrix.cols(), CV_8UC1);
-        for (int i = 0; i < matrix.rows(); ++i)
-            for (int j = 0; j < matrix.cols(); ++j)
-                mat.at<unsigned char>(i, j) = matrix(i, j);
-        return mat;
+        cv::Mat mat(matrix.rows(), matrix.cols(), CV_8UC1, (void*)matrix.data(), matrix.outerStride());
+        return mat.clone(); // Clone to ensure the data is copied
     }
 
     template <typename T>
     Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> cv2eigen(const cv::Mat &mat)
     {
-        Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> matrix(mat.rows, mat.cols);
-        for (int i = 0; i < mat.rows; ++i)
-            for (int j = 0; j < mat.cols; ++j)
-                matrix(i, j) = mat.at<T>(i, j);
+        Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> matrix;
+        cv::cv2eigen(mat, matrix);
         return matrix;
     }
 
