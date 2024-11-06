@@ -50,7 +50,7 @@ Grid_map::Grid_map(const nav_msgs::msg::OccupancyGrid &map_data)
         }
     }
 
-    cv::imwrite("obstacle_map.png", obstacle_map);
+    // cv::imwrite("obstacle_map.png", obstacle_map);
 
     // Convert obstacle data to binary image for distance transform
     Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> binary = obstacleData.cast<unsigned char>();
@@ -74,10 +74,10 @@ Grid_map::Grid_map(const nav_msgs::msg::OccupancyGrid &map_data)
     map_["distance"] = distance * resolution;
 
     // Save the distance map for visualization
-    cv::Mat distance_visual;
-    cv::normalize(distance_cv, distance_visual, 0, 255, cv::NORM_MINMAX);
-    distance_visual.convertTo(distance_visual, CV_8UC1);
-    cv::imwrite("distance_map.png", distance_visual);
+    // cv::Mat distance_visual;
+    // cv::normalize(distance_cv, distance_visual, 0, 255, cv::NORM_MINMAX);
+    // distance_visual.convertTo(distance_visual, CV_8UC1);
+    // cv::imwrite("distance_map.png", distance_visual);
 }
 
 Grid_map::~Grid_map()
@@ -109,7 +109,6 @@ void Grid_map::updateMap()
 
 bool Grid_map::checkCollision(const State &state, const geometry_msgs::msg::Polygon &vehicle_poly_state)
 {
-    // auto init_time = std::chrono::system_clock::now();
 
     obstacle_polys.clear(); // Clear the obstacle polygons
     // Define the 5 meter offset
@@ -138,18 +137,11 @@ bool Grid_map::checkCollision(const State &state, const geometry_msgs::msg::Poly
                 double x = originX + j * resolution;
                 double y = originY + i * resolution;
                 geometry_msgs::msg::Polygon poly = createObstaclePolygon(x, y, resolution);
-                // log the obstacle polygon
-                // for (const auto &point : poly.points)
-                // {
-                //     cout << "x: " << point.x << " y: " << point.y << endl;
-                // }
+
                 obstacle_polys.push_back(poly);
 
                 if (collision_checker.check_collision(vehicle_poly_state, poly))
                 {
-                    // auto end_time = std::chrono::system_clock::now();
-                    // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
-                    // cout << purple << "--> Execution time checl collision: " << duration << " ms" << reset << endl;
                     return true; // Collision detected
                 }
             }
@@ -257,24 +249,15 @@ bool Grid_map::isSingleStateCollisionFree(const State &current)
         // Create a position based on the circle's center
         Eigen::Vector2d pos(circle_itr.x, circle_itr.y);
 
-        // cout the position in blue
-        // cout << blue << "Position: " << pos.transpose() << reset << endl;
-        // cout the radius in blue
-        // cout << blue << "Radius: " << circle_itr.r << reset << endl;
-
         // Check if the circle is inside the map bounds
         if (isInside(pos))
         {
             // Get the clearance (distance to nearest obstacle)
             double clearance = getObstacleDistance(pos);
 
-            // cout the clearance in yellow
-            // cout << yellow << "Clearance: " << clearance << reset << endl;
-
             // If the clearance is less than the circle's radius, it means a collision
             if (clearance < circle_itr.r)
             {
-                // cout << red << "Collision detected by clearance < circle_itr.r" << reset << endl;
                 // auto end_time = std::chrono::system_clock::now();
                 // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
                 // cout << purple << "--> Execution time check collision new version: " << duration << " ms" << reset << endl;
@@ -284,12 +267,10 @@ bool Grid_map::isSingleStateCollisionFree(const State &current)
         }
         else
         {
-            // If out of bounds, consider it a collision
-            // cout << red << "Collision detected by out of bounds" << reset << endl;
             // auto end_time = std::chrono::system_clock::now();
             // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
             // cout << purple << "--> Execution time check collision new version: " << duration << " ms" << reset << endl;
-
+            // If out of bounds, consider it a collision
             return true;
         }
     }
@@ -333,38 +314,4 @@ bool Grid_map::isSingleStateCollisionFreeImproved(const State &current)
         // If out of bounds, consider it a collision
         return false;
     }
-}
-
-nav_msgs::msg::OccupancyGrid Grid_map::getObstaclesOccupancyGrid()
-{
-    // Create an OccupancyGrid message
-    nav_msgs::msg::OccupancyGrid occupancy_grid;
-    occupancy_grid.info.resolution = resolution; // Set the resolution (cell size in meters)
-    occupancy_grid.info.width = width;           // Set the width in cells
-    occupancy_grid.info.height = height;         // Set the height in cells
-    occupancy_grid.info.origin.position.x = originX;
-    occupancy_grid.info.origin.position.y = originY;
-    occupancy_grid.info.origin.position.z = 0.0;    // Set the z position to 0
-    occupancy_grid.info.origin.orientation.w = 1.0; // No rotation, quaternion identity
-    occupancy_grid.header.frame_id = "map";         // Set frame id to "map" (or other if applicable)
-    // occupancy_grid.header.stamp = rclcpp::Clock().now();
-
-    // Initialize the occupancy grid data
-    occupancy_grid.data.resize(width * height, -1); // Initialize with unknown (-1) occupancy
-
-    // Copy the obstacle data from the GridMap to the OccupancyGrid
-    const grid_map::Matrix &obstacleData = map_["distance"];
-    for (size_t row = 0; row < height; ++row)
-    {
-        for (size_t col = 0; col < width; ++col)
-        {
-            // Convert the obstacle map values into occupancy grid format
-            // ROS OccupancyGrid expects:
-            //   -1 = Unknown, 0 = Free, 100 = Occupied
-            int8_t occupancy_value = obstacleData(row, col) > 0.5 ? 100 : 0; // Threshold to determine if occupied
-            occupancy_grid.data[row * width + col] = occupancy_value;
-        }
-    }
-
-    return occupancy_grid;
 }

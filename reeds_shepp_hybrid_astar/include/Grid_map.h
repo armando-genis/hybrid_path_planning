@@ -93,7 +93,6 @@ public:
     double getMaxOriginX() { return Max_origin_x; }
     double getMaxOriginY() { return Max_origin_y; }
     std::vector<geometry_msgs::msg::Polygon> getObstaclePolys() { return obstacle_polys; }
-
     bool checkCollision(const State &state, const geometry_msgs::msg::Polygon &vehicle_poly_state);
 
     // ===================== NEW METHOD =====================
@@ -103,8 +102,6 @@ public:
     bool isSingleStateCollisionFree(const State &current);
     bool isSingleStateCollisionFreeImproved(const State &current);
     cv::Mat eigenToCvMat(const Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> &eigen_matrix);
-
-    nav_msgs::msg::OccupancyGrid getObstaclesOccupancyGrid();
 
     std::tuple<int, int> toCellID(State start_state);
     int toCellIndex(int x, int y);

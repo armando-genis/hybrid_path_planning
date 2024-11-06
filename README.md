@@ -1,6 +1,9 @@
 # hybrid_path_planning
  This repository contains ROS2 Humble packages implementing hybrid path planning algorithms for vehicle that can move both forward and backward, including reeds_shepp and dubins motion
 
+## 🔥 Optimized
+- The `reeds_shepp_hybrid_astar` package leverages `grid_map_ro`s to create optimized "obstacle" and "distance" layers, reducing the time needed to calculate obstacle checks with the vehicle's geometry. This setup minimizes collision risks and enhances efficiency for faster, more accurate path planning.
+
 ## 📥 Install dependencies
 ```bash
 sudo apt-get install libeigen3-dev
