@@ -17,6 +17,7 @@
 #include <cmath>
 #include <iostream>
 #include <memory>
+#include <omp.h>
 
 using namespace std;
 
@@ -58,9 +59,9 @@ public:
     double reeds_Path_Cost(const std::shared_ptr<planner::Node> &currentNode, const PATH *path);
     // holonomic path planning
     vector<vector<int>> holonomicMotionCommands();
-    vector<std::shared_ptr<planner::HolonomicNode>> holonomicCostsWithObstacles_planning(const std::shared_ptr<planner::Node> &GoalNode);
+    std::vector<double> holonomicCostsWithObstacles_planning(const std::shared_ptr<planner::Node> &GoalNode);
     std::shared_ptr<planner::HolonomicNode> getNode(int index, vector<std::shared_ptr<planner::HolonomicNode>> &goal_map_);
-    double eucledianCost(const vector<int> &holonomicMotionCommand, const State &current_state);
+    inline double eucledianCost(const std::vector<int> &command, const int current_x, const int current_y);
 
 private:
     Grid_map grid_map_;

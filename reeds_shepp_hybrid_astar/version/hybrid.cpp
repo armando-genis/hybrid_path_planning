@@ -3,7 +3,7 @@
 HybridAstar::HybridAstar(Grid_map grid_map, CarData car_data, double simulationLength, double step_car)
     : grid_map_(grid_map), car_data_(car_data), simulationLength(simulationLength), step_car(step_car)
 {
-    cout << purple << " ----> Hybrid Astar Initialized <----" << reset << endl;
+    cout << purple << "--Hybrid Astar Initialized--" << reset << endl;
 
     // Step 2: Generate motion commands
     motionCommands();
@@ -324,30 +324,13 @@ std::shared_ptr<planner::HolonomicNode> HybridAstar::getNode(int index, vector<s
 }
 
 // ============================= Hybrid A* ============================
-inline double HybridAstar::eucledianCost(const std::vector<int> &command, const int current_x, const int current_y)
+inline double HybridAstar::eucledianCost(const std::vector<int> &command)
 {
-
-    double distance_cost = std::hypot(command[0], command[1]);
-
-    double obstacle_penalty = 0.0;
-
-    for (int dx = -1; dx <= 1; ++dx)
-    {
-        for (int dy = -1; dy <= 1; ++dy)
-        {
-            int neighbor_x = current_x + dx;
-            int neighbor_y = current_y + dy;
-
-            // Increase penalty if neighbor cell is in collision
-            if (grid_map_.isInCollision(neighbor_x, neighbor_y))
-            {
-                obstacle_penalty += 10.0;
-            }
-        }
-    }
-
-    // Total cost is the distance cost plus the obstacle penalty
-    return distance_cost + obstacle_penalty;
+    // Since the movement is in 8 directions, the cost is either 1.0 or sqrt(2)
+    if (abs(command[0]) + abs(command[1]) == 1)
+        return 1.0; // Orthogonal movement
+    else
+        return 1.41421356237; // Diagonal movement (sqrt(2))
 }
 
 std::vector<double> HybridAstar::holonomicCostsWithObstacles_planning(const std::shared_ptr<planner::Node> &GoalNode)
@@ -418,7 +401,7 @@ std::vector<double> HybridAstar::holonomicCostsWithObstacles_planning(const std:
                 continue;
 
             // Calculate the new cost to reach the neighbor
-            double movement_cost = eucledianCost(command, current_x, current_y);
+            double movement_cost = eucledianCost(command);
             double newCost = current_cost + movement_cost;
 
 
@@ -433,7 +416,7 @@ std::vector<double> HybridAstar::holonomicCostsWithObstacles_planning(const std:
 
     auto end_time = std::chrono::system_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
-    std::cout << blue << "Execution time holonomic: " << duration << " ms" << reset << std::endl;
+    std::cout << "Execution time holonomic: " << duration << " ms" << std::endl;
 
     return cost_map_;
 }
@@ -482,8 +465,9 @@ vector<State> HybridAstar::run(State start_state, State goal_state)
 
     // Step 6: Add the start node to the open set
     openSet[start_state_] = startNode;
-    costQueue.push({startNode->Cost_path + hybridCost * goal_map_[start_index], startNode});
-
+    // Access the cost directly from the goal_map_ vector
+    double heuristic_cost = hybridCost * goal_map_[start_index];
+    costQueue.push({startNode->Cost_path + heuristic_cost, startNode});
 
     // Step 6.5: Initialize a counter for the number of iterations
     int iterations = 0;
@@ -546,7 +530,6 @@ vector<State> HybridAstar::run(State start_state, State goal_state)
         // Get neighboring nodes by simulating motion
         auto neighbors = GetnextNeighbours(currentNode);
 
-
         for (auto &neighbor : neighbors)
         {
             // Get the neighbor's state
@@ -566,7 +549,8 @@ vector<State> HybridAstar::run(State start_state, State goal_state)
                 continue; // Skip if the index is out of bounds
             }
 
-            double neighborCost = neighbor->Cost_path + hybridCost * goal_map_[neighbor_index];
+            double heuristic_cost = hybridCost * goal_map_[neighbor_index];
+            double neighborCost = neighbor->Cost_path + heuristic_cost;
 
             // If neighbor is not in the open set, or the new cost is lower, add/update it
             if (openSet.find(neighborState) == openSet.end() || neighbor->Cost_path < openSet[neighborState]->Cost_path)
@@ -611,9 +595,115 @@ vector<State> HybridAstar::run(State start_state, State goal_state)
         costQueue.pop();
     }
 
-    goal_map_.clear();
-
-    cout << purple << " ----> Finish <---- " << reset << endl;
+    cout << blue << " ----> Finish <---- " << reset << endl;
 
     return goal_trajectory;
 }
+
+
+
+
+
+
+// =============================================================================================
+
+
+
+#ifndef HYBRID_ASTAR_H
+#define HYBRID_ASTAR_H
+
+#include <nav_msgs/msg/path.hpp>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
+#include "State.h"
+#include "Grid_map.h"
+#include "CarData.h"
+#include "Node.h"
+#include "reeds_shepp_path.h"
+
+#include <tuple>
+#include <vector>
+#include <queue>
+#include <cmath>
+#include <iostream>
+#include <memory>
+#include <omp.h>
+
+using namespace std;
+
+#define PI 3.14159
+const double EPSILON = 1e-9;
+
+struct NodeComparator
+{
+    bool operator()(const std::pair<double, std::shared_ptr<planner::Node>> &lhs,
+                    const std::pair<double, std::shared_ptr<planner::Node>> &rhs) const
+    {
+        return lhs.first > rhs.first;
+    }
+};
+
+struct PathCostCompare
+{
+    bool operator()(const std::pair<double, PATH> &lhs, const std::pair<double, PATH> &rhs) const
+    {
+        return lhs.first > rhs.first; // Compare by cost, for min-heap
+    }
+};
+
+class HybridAstar
+{
+public:
+    HybridAstar(Grid_map grid_map, CarData car_data, double simulationLength, double step_car);
+    vector<State> run(State start_state, State goal_state);
+
+    // The obstacle heuristic
+    void motionCommands();
+    vector<std::shared_ptr<planner::Node>> GetnextNeighbours(const std::shared_ptr<planner::Node> &current_node);
+    double PathCost(const std::shared_ptr<planner::Node> &current_node, const vector<double> &motionCommand);
+
+    // reeds path planning
+    std::shared_ptr<planner::Node> reeds_shepp_Path(const std::shared_ptr<planner::Node> &current_Node, const std::shared_ptr<planner::Node> &goal_Node);
+    std::shared_ptr<planner::Node> reeds_shepp_Path_priority_queue(const std::shared_ptr<planner::Node> &current_Node, std::vector<PATH> reedsSheppPaths);
+    std::shared_ptr<planner::Node> reeds_shepp_Path_iterative(const std::shared_ptr<planner::Node> &current_Node, std::vector<PATH> reedsSheppPaths);
+    double reeds_Path_Cost(const std::shared_ptr<planner::Node> &currentNode, const PATH *path);
+    // holonomic path planning
+    vector<vector<int>> holonomicMotionCommands();
+    std::vector<double> holonomicCostsWithObstacles_planning(const std::shared_ptr<planner::Node> &GoalNode);
+    std::shared_ptr<planner::HolonomicNode> getNode(int index, vector<std::shared_ptr<planner::HolonomicNode>> &goal_map_);
+    inline double eucledianCost(const std::vector<int> &command);
+
+private:
+    Grid_map grid_map_;
+    CarData car_data_;
+
+    reeds_shepp_path Reeds_Shepp_Path_;
+
+    State start_state_;
+    State goal_state_;
+
+    vector<vector<double>> motionCommand;
+
+    // parameter to change to get a better offordable path
+    double simulationLength;
+    double step_car;
+
+    double reverse = 10.0;
+    double directionChange = 250.0;
+    double steerAngle = 15.0;
+    double steerAngleChange = 20.0;
+    double hybridCost = 30.0;
+
+    // colors for the terminal
+    string green = "\033[1;32m";
+    string red = "\033[1;31m";
+    string blue = "\033[1;34m";
+    string yellow = "\033[1;33m";
+    string purple = "\033[1;35m";
+    string reset = "\033[0m";
+
+    const double HEADING_TOLERANCE = 0.05;
+};
+
+#endif // HYBRID_ASTAR_H
