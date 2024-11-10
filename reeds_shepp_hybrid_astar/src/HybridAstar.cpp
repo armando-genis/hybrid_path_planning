@@ -611,6 +611,8 @@ vector<State> HybridAstar::run(State start_state, State goal_state)
         costQueue.pop();
     }
 
+    goal_map_.clear();
+
     cout << purple << " ----> Finish <---- " << reset << endl;
 
     return goal_trajectory;
