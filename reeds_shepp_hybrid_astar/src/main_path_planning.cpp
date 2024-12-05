@@ -38,6 +38,8 @@ main_path_planning::main_path_planning(/* args */) : Node("main_planner_node")
     car_data_ = CarData(maxSteerAngle, wheelBase, axleToFront, axleToBack, width);
     car_data_.createVehicleGeometry();
 
+    tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
+
     // log out parameters in blue color
     RCLCPP_INFO(this->get_logger(), "\033[1;34mmaxSteerAngle: %f\033[0m", maxSteerAngle);
     RCLCPP_INFO(this->get_logger(), "\033[1;34mwheelBase: %f\033[0m", wheelBase);
@@ -181,6 +183,25 @@ void main_path_planning::start_point(const geometry_msgs::msg::PoseWithCovarianc
 
     // Publish the MarkerArray containing the circles
     circles_pub_->publish(circles_marker_array);
+
+
+    // Publish the start point as a TF
+    geometry_msgs::msg::TransformStamped transform_stamped;
+    transform_stamped.header.stamp = this->now();
+    transform_stamped.header.frame_id = "map"; // Parent frame
+    transform_stamped.child_frame_id = "base_link"; // Child frame (customize as needed)
+
+    // Position
+    transform_stamped.transform.translation.x = start->pose.pose.position.x;
+    transform_stamped.transform.translation.y = start->pose.pose.position.y;
+    transform_stamped.transform.translation.z = start->pose.pose.position.z;
+
+    // Orientation (quaternion remains as is)
+    transform_stamped.transform.rotation = start->pose.pose.orientation;
+
+    // Broadcast the transform
+    tf_broadcaster_->sendTransform(transform_stamped);
+
 
 }
 
