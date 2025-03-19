@@ -354,13 +354,24 @@ std::vector<double> HybridAstar::holonomicCostsWithObstacles_planning(const std:
 {
     auto init_time = std::chrono::system_clock::now();
 
-    size_t width = grid_map_.getWidth();
-    size_t height = grid_map_.getHeight();
-    size_t map_size = width * height;
+    const size_t width = grid_map_.getWidth();
+    const size_t height = grid_map_.getHeight();
+    const size_t map_size = width * height;
 
-    // Initialize the cost map and closed set
-    std::vector<double> cost_map_(map_size, std::numeric_limits<double>::infinity());
-    std::vector<bool> closed_set_(map_size, false);
+    // OPTIMIZATION 1: Use a static vector to avoid reallocating every time
+    static std::vector<double> cost_map_;
+    static std::vector<bool> closed_set_;
+
+    // Resize only if needed (first call or map size changed)
+    if (cost_map_.size() != map_size)
+    {
+        cost_map_.resize(map_size);
+        closed_set_.resize(map_size);
+    }
+
+    // OPTIMIZATION 2: Use std::fill instead of initializing with constructor
+    std::fill(cost_map_.begin(), cost_map_.end(), std::numeric_limits<double>::infinity());
+    std::fill(closed_set_.begin(), closed_set_.end(), false);
 
     State goal_state = GoalNode->Current_state;
     int goal_index = grid_map_.toCellIndex(goal_state.gridx, goal_state.gridy);
@@ -368,68 +379,176 @@ std::vector<double> HybridAstar::holonomicCostsWithObstacles_planning(const std:
     // Set the goal node cost to zero
     cost_map_[goal_index] = 0.0;
 
-    // Generate holonomic motion commands (8-directional movement)
-    const std::vector<std::vector<int>> &holonomicMotionCommand = holonomicMotionCommands();
+    // OPTIMIZATION 3: Precompute the 8 motion directions just once
+    static const std::vector<std::pair<int, int>> directions = {
+        {-1, 0}, {-1, 1}, {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, -1}};
 
-    // Create a priority queue for the open set
-    // The priority queue stores pairs of (cost, index)
-    using PQElement = std::pair<double, int>;
-    std::priority_queue<PQElement, std::vector<PQElement>, std::greater<PQElement>> openset_;
-
-    // Push the goal node into the open set
-    openset_.push(std::make_pair(0.0, goal_index));
-
-    int count = 0;
-
-    while (!openset_.empty())
+    // OPTIMIZATION 4: Calculate movement costs dynamically but efficiently
+    // Use direct calculation rather than a predefined array for flexibility
+    auto getCost = [](int dx, int dy) -> double
     {
-        count++;
+        // Use faster integer comparison for diagonal check
+        return (dx == 0 || dy == 0) ? 1.0 : 1.414;
+    };
 
-        // Get the node with the lowest cost
-        auto [current_cost, current_index] = openset_.top();
-        openset_.pop();
+    // OPTIMIZATION 5: Use a bucket queue instead of priority queue
+    // For a 2D grid, costs are typically small integers, making a bucket queue much faster
+    // Scale MAX_COST based on grid size to handle large maps
+    const int MAX_COST = std::max(5000, static_cast<int>(width + height));
+    std::vector<std::vector<int>> buckets(MAX_COST);
 
-        // If this node has already been processed, skip it
-        if (closed_set_[current_index])
-            continue;
+    // Start with bucket 0
+    buckets[0].push_back(goal_index);
+    int current_bucket = 0;
 
-        // Mark the node as closed
-        closed_set_[current_index] = true;
+    // OPTIMIZATION 6: Process the entire map if necessary, with periodic checks
+    int processed_cells = 0;
+    // Don't artificially limit the number of cells, but check progress periodically
+    const int PROGRESS_CHECK_INTERVAL = 50000;
 
-        // Get the current node's grid coordinates
-        int current_x = current_index % width;
-        int current_y = current_index / width;
+    // OPTIMIZATION 7: Check if we have a cached result
+    static int last_goal_x = -1;
+    static int last_goal_y = -1;
+    static std::vector<double> cached_cost_map_;
 
-        // For each holonomic motion command
-        for (const auto &command : holonomicMotionCommand)
+    if (last_goal_x == goal_state.gridx && last_goal_y == goal_state.gridy &&
+        !cached_cost_map_.empty())
+    {
+        // Return cached result if goal position hasn't changed
+        return cached_cost_map_;
+    }
+
+    last_goal_x = goal_state.gridx;
+    last_goal_y = goal_state.gridy;
+
+    // OPTIMIZATION 8: Process until completion with periodic progress checks
+    while (true)
+    {
+        // Find the next non-empty bucket
+        while (current_bucket < MAX_COST && buckets[current_bucket].empty())
         {
-            int cell_x = current_x + command[0];
-            int cell_y = current_y + command[1];
+            current_bucket++;
+        }
 
-            // Check if the neighbor is within bounds
-            if (cell_x < 0 || cell_x >= static_cast<int>(width) || cell_y < 0 || cell_y >= static_cast<int>(height))
-                continue;
+        if (current_bucket >= MAX_COST)
+        {
+            break; // No more cells to process
+        }
 
-            // Get the index of the neighboring cell
-            int neighbor_index = grid_map_.toCellIndex(cell_x, cell_y);
+        // Process all cells in the current bucket
+        std::vector<int> current_cells;
+        std::swap(current_cells, buckets[current_bucket]);
 
-            // If the neighbor is in collision or already closed, skip it
-            if (grid_map_.isInCollision(cell_x, cell_y) || closed_set_[neighbor_index])
-                continue;
-
-            // Calculate the new cost to reach the neighbor
-            double movement_cost = eucledianCost(command, current_x, current_y);
-            double newCost = current_cost + movement_cost;
-
-
-            // If the new cost is lower, update the cost map and push into the open set
-            if (newCost < cost_map_[neighbor_index])
+        for (int current_index : current_cells)
+        {
+            // Skip if already processed
+            if (closed_set_[current_index])
             {
-                cost_map_[neighbor_index] = newCost;
-                openset_.push(std::make_pair(newCost, neighbor_index));
+                continue;
+            }
+
+            double current_cost = cost_map_[current_index];
+            closed_set_[current_index] = true;
+            processed_cells++;
+
+            // Check progress periodically for very large maps
+            if (processed_cells % PROGRESS_CHECK_INTERVAL == 0)
+            {
+                // If we've processed a large number of cells, check if we're reaching diminishing returns
+                // This helps with extremely large maps without artificially cutting off processing
+                bool sufficient_coverage = true;
+
+                // Check if the start location has been processed (if known)
+                if (grid_map_.isPointInBounds(start_state_.gridx, start_state_.gridy))
+                {
+                    int start_index = grid_map_.toCellIndex(start_state_.gridx, start_state_.gridy);
+                    if (!closed_set_[start_index] && cost_map_[start_index] == std::numeric_limits<double>::infinity())
+                    {
+                        sufficient_coverage = false;
+                    }
+                }
+
+                // If we have sufficient coverage or have processed a very large portion, we can stop
+                if (sufficient_coverage || processed_cells > map_size * 0.75)
+                {
+                    break;
+                }
+            }
+
+            // Compute coordinates only once
+            int current_x = current_index % width;
+            int current_y = current_index / width;
+
+            // OPTIMIZATION 9: Check all 8 directions with minimal branching
+            for (int dir = 0; dir < 8; dir++)
+            {
+                int cell_x = current_x + directions[dir].first;
+                int cell_y = current_y + directions[dir].second;
+
+                // Skip if out of bounds - combined check
+                if (cell_x < 0 || cell_x >= static_cast<int>(width) ||
+                    cell_y < 0 || cell_y >= static_cast<int>(height))
+                {
+                    continue;
+                }
+
+                // OPTIMIZATION 10: Compute index directly instead of calling function
+                int neighbor_index = cell_y * width + cell_x;
+
+                // Skip if closed or collision
+                if (closed_set_[neighbor_index] || grid_map_.isInCollision(cell_x, cell_y))
+                {
+                    continue;
+                }
+
+                // Calculate movement cost dynamically
+                double movement_cost = getCost(directions[dir].first, directions[dir].second);
+
+                // OPTIMIZATION 12: Simplified obstacle proximity check
+                bool near_obstacle = false;
+                // Only check 4 cardinal directions for obstacles (faster than checking all 8)
+                static const int dx[4] = {-1, 0, 1, 0};
+                static const int dy[4] = {0, -1, 0, 1};
+
+                for (int i = 0; i < 4; i++)
+                {
+                    int nx = cell_x + dx[i];
+                    int ny = cell_y + dy[i];
+
+                    if (nx >= 0 && nx < static_cast<int>(width) &&
+                        ny >= 0 && ny < static_cast<int>(height) &&
+                        grid_map_.isInCollision(nx, ny))
+                    {
+                        near_obstacle = true;
+                        break;
+                    }
+                }
+
+                if (near_obstacle)
+                {
+                    movement_cost += 5.0; // Penalty for being near obstacles
+                }
+
+                double new_cost = current_cost + movement_cost;
+
+                // Update if better cost found
+                if (new_cost < cost_map_[neighbor_index])
+                {
+                    cost_map_[neighbor_index] = new_cost;
+
+                    // Add to appropriate bucket (rounded to integer)
+                    int bucket_index = std::min(static_cast<int>(new_cost), MAX_COST - 1);
+                    buckets[bucket_index].push_back(neighbor_index);
+
+                    // Update current bucket if needed
+                    current_bucket = std::min(current_bucket, bucket_index);
+                }
             }
         }
     }
+
+    // OPTIMIZATION 13: Cache the result for future calls
+    cached_cost_map_ = cost_map_;
 
     auto end_time = std::chrono::system_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - init_time).count();
@@ -483,7 +602,6 @@ vector<State> HybridAstar::run(State start_state, State goal_state)
     // Step 6: Add the start node to the open set
     openSet[start_state_] = startNode;
     costQueue.push({startNode->Cost_path + hybridCost * goal_map_[start_index], startNode});
-
 
     // Step 6.5: Initialize a counter for the number of iterations
     int iterations = 0;
@@ -545,7 +663,6 @@ vector<State> HybridAstar::run(State start_state, State goal_state)
 
         // Get neighboring nodes by simulating motion
         auto neighbors = GetnextNeighbours(currentNode);
-
 
         for (auto &neighbor : neighbors)
         {
