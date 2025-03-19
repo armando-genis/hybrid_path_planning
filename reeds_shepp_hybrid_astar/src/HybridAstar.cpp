@@ -358,7 +358,6 @@ std::vector<double> HybridAstar::holonomicCostsWithObstacles_planning(const std:
     const size_t height = grid_map_.getHeight();
     const size_t map_size = width * height;
 
-    // OPTIMIZATION 1: Use a static vector to avoid reallocating every time
     static std::vector<double> cost_map_;
     static std::vector<bool> closed_set_;
 
@@ -369,7 +368,6 @@ std::vector<double> HybridAstar::holonomicCostsWithObstacles_planning(const std:
         closed_set_.resize(map_size);
     }
 
-    // OPTIMIZATION 2: Use std::fill instead of initializing with constructor
     std::fill(cost_map_.begin(), cost_map_.end(), std::numeric_limits<double>::infinity());
     std::fill(closed_set_.begin(), closed_set_.end(), false);
 
@@ -379,11 +377,11 @@ std::vector<double> HybridAstar::holonomicCostsWithObstacles_planning(const std:
     // Set the goal node cost to zero
     cost_map_[goal_index] = 0.0;
 
-    // OPTIMIZATION 3: Precompute the 8 motion directions just once
+    // Define the 8-connected grid directions
     static const std::vector<std::pair<int, int>> directions = {
         {-1, 0}, {-1, 1}, {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, -1}};
 
-    // OPTIMIZATION 4: Calculate movement costs dynamically but efficiently
+    // Define a lambda function to calculate movement cost
     // Use direct calculation rather than a predefined array for flexibility
     auto getCost = [](int dx, int dy) -> double
     {
@@ -391,9 +389,9 @@ std::vector<double> HybridAstar::holonomicCostsWithObstacles_planning(const std:
         return (dx == 0 || dy == 0) ? 1.0 : 1.414;
     };
 
-    // OPTIMIZATION 5: Use a bucket queue instead of priority queue
-    // For a 2D grid, costs are typically small integers, making a bucket queue much faster
-    // Scale MAX_COST based on grid size to handle large maps
+    // Use a bucket queue instead of priority queue
+    //  For a 2D grid, costs are typically small integers, making a bucket queue much faster
+    //  Scale MAX_COST based on grid size to handle large maps
     const int MAX_COST = std::max(5000, static_cast<int>(width + height));
     std::vector<std::vector<int>> buckets(MAX_COST);
 
@@ -401,12 +399,11 @@ std::vector<double> HybridAstar::holonomicCostsWithObstacles_planning(const std:
     buckets[0].push_back(goal_index);
     int current_bucket = 0;
 
-    // OPTIMIZATION 6: Process the entire map if necessary, with periodic checks
+    // Process the entire map if necessary, with periodic checks
     int processed_cells = 0;
     // Don't artificially limit the number of cells, but check progress periodically
-    const int PROGRESS_CHECK_INTERVAL = 50000;
+    const int PROGRESS_CHECK_INTERVAL = 70000;
 
-    // OPTIMIZATION 7: Check if we have a cached result
     static int last_goal_x = -1;
     static int last_goal_y = -1;
     static std::vector<double> cached_cost_map_;
@@ -458,7 +455,6 @@ std::vector<double> HybridAstar::holonomicCostsWithObstacles_planning(const std:
                 // This helps with extremely large maps without artificially cutting off processing
                 bool sufficient_coverage = true;
 
-                // Check if the start location has been processed (if known)
                 if (grid_map_.isPointInBounds(start_state_.gridx, start_state_.gridy))
                 {
                     int start_index = grid_map_.toCellIndex(start_state_.gridx, start_state_.gridy);
@@ -479,7 +475,6 @@ std::vector<double> HybridAstar::holonomicCostsWithObstacles_planning(const std:
             int current_x = current_index % width;
             int current_y = current_index / width;
 
-            // OPTIMIZATION 9: Check all 8 directions with minimal branching
             for (int dir = 0; dir < 8; dir++)
             {
                 int cell_x = current_x + directions[dir].first;
@@ -492,7 +487,7 @@ std::vector<double> HybridAstar::holonomicCostsWithObstacles_planning(const std:
                     continue;
                 }
 
-                // OPTIMIZATION 10: Compute index directly instead of calling function
+                // Compute index directly instead of calling function
                 int neighbor_index = cell_y * width + cell_x;
 
                 // Skip if closed or collision
@@ -504,7 +499,6 @@ std::vector<double> HybridAstar::holonomicCostsWithObstacles_planning(const std:
                 // Calculate movement cost dynamically
                 double movement_cost = getCost(directions[dir].first, directions[dir].second);
 
-                // OPTIMIZATION 12: Simplified obstacle proximity check
                 bool near_obstacle = false;
                 // Only check 4 cardinal directions for obstacles (faster than checking all 8)
                 static const int dx[4] = {-1, 0, 1, 0};
@@ -547,7 +541,6 @@ std::vector<double> HybridAstar::holonomicCostsWithObstacles_planning(const std:
         }
     }
 
-    // OPTIMIZATION 13: Cache the result for future calls
     cached_cost_map_ = cost_map_;
 
     auto end_time = std::chrono::system_clock::now();

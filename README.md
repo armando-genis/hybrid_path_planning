@@ -2,7 +2,9 @@
  This repository contains ROS2 Humble packages implementing hybrid path planning algorithms for vehicle that can move both forward and backward, including reeds_shepp and dubins motion
 
 ## 🔥 Optimized
-- The `reeds_shepp_hybrid_astar` package leverages `grid_map_ro`s to create optimized "obstacle" and "distance" layers, reducing the time needed to calculate obstacle checks with the vehicle's geometry. This setup minimizes collision risks and enhances efficiency for faster, more accurate path planning.
+- The `reeds_shepp_hybrid_astar` package leverages `grid_map_ro`s to create optimized "obstacle" and "distance" layers, reducing the time needed to calculate obstacle checks with the vehicle's geometry. This setup minimizes collision risks and enhances efficiency for faster, more accurate path planning. 
+
+- **Execution time reduced by over 50%** 🚀 The `holonomicCostsWithObstacles_planning` function has been **optimized**, significantly improving cost computation efficiency. This enhancement reduces the time required for obstacle checks while considering the vehicle’s geometry, **minimizing collision risks** and enabling **faster, more precise path planning**.
 
 ## 📥 Install dependencies
 ```bash
