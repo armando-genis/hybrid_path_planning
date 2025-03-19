@@ -556,7 +556,7 @@ std::vector<double> HybridAstar::holonomicCostsWithObstacles_planning(const std:
 
     return cost_map_;
 }
-
+// main function
 vector<State> HybridAstar::run(State start_state, State goal_state)
 {
     // Initialize the time
