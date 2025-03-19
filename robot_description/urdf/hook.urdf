@@ -1,0 +1,18 @@
+<?xml version="1.0" ?>
+<robot name="dasautonomeauto" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+
+    <link name="base_link">
+      <visual>
+        <origin xyz="0.0 -0.1 0.1" rpy="1.5708 0 1.5708" />
+        <geometry>
+          <mesh filename="file://$(find robot_description)/meshes/2WD+Public+Release+v2.stl" scale="0.005 0.005 0.005"/>
+        </geometry>
+        <material name="Gray">
+          <color rgba="0.92 0.92 0.92 0.9"/>
+        </material>
+      </visual>
+
+    </link>
+
+</robot>
