@@ -94,14 +94,3 @@ ros2 launch global_launcher dubins_hybrid.launch.py
 - You can modify the parameters in the config/global_launcher.yaml file to suit your vehicle and environment.
 - The planners require a grid map to operate, so ensure that a valid grid map is published to the specified topics (/grid_map_inflated).
 
-
-
-→ run 
-
-```jsx
-import bla bla
-```
-
-## HOLA 1
-
-### HOLA 2
